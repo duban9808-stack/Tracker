@@ -804,9 +804,9 @@ const app = {
             weight, reps, rir, notes: ''
         });
         Storage.setCurrentWorkout(this.currentWorkout);
-        document.getElementById('inputWeight').value = '';
+        // Mantener el peso de la serie anterior, vaciar solo las reps
         document.getElementById('inputReps').value = '';
-        document.getElementById('inputWeight').focus();
+        document.getElementById('inputReps').focus();
         this.showToast(`Serie ${seriesCount + 1} agregada`);
         this.renderWorkout();
     },
