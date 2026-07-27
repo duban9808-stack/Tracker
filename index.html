@@ -221,7 +221,7 @@
             </button>
             <button onclick="app.showView('rmcalc')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="rmcalc">
                 <i class="fas fa-calculator text-lg"></i>
-                <span class="text-[10px] font-semibold">RM</span>
+                <span class="text-[10px] font-semibold">Cálculo</span>
             </button>
             <button onclick="app.showView('settings')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="settings">
                 <i class="fas fa-cog text-lg"></i>
@@ -804,11 +804,18 @@ const app = {
             weight, reps, rir, notes: ''
         });
         Storage.setCurrentWorkout(this.currentWorkout);
-        // Mantener el peso de la serie anterior, vaciar solo las reps
-        document.getElementById('inputReps').value = '';
-        document.getElementById('inputReps').focus();
         this.showToast(`Serie ${seriesCount + 1} agregada`);
         this.renderWorkout();
+        // Restaurar el peso de la última serie para el siguiente input
+        const lastEntry = this.currentWorkout.entries
+            .filter(e => e.exerciseId === currentExerciseId)
+            .slice(-1)[0];
+        if (lastEntry) {
+            const wInput = document.getElementById('inputWeight');
+            if (wInput) wInput.value = lastEntry.weight;
+        }
+        const rInput = document.getElementById('inputReps');
+        if (rInput) { rInput.value = ''; rInput.focus(); }
     },
 
     deleteEntry(tempId) {
@@ -1600,8 +1607,28 @@ const app = {
         document.getElementById('mainContent').innerHTML = `
             <div class="space-y-5 pb-8 fade-up">
                 <div>
-                    <h2 class="text-2xl font-black text-text tracking-tight">Calculadora RM</h2>
+                    <h2 class="text-2xl font-black text-text tracking-tight">Cálculo</h2>
                     <p class="text-sm text-textSecondary mt-1">Estima tu repetición máxima</p>
+                </div>
+
+                <!-- Calculadora kg ↔ lb -->
+                <div class="card p-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                            <i class="fas fa-scale-balanced text-cyan-400 text-sm"></i>
+                        </div>
+                        <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider">Conversor de peso</h3>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Kilogramos (kg)</label>
+                            <input type="number" id="convKg" oninput="app.convertWeight('kg')" class="input-field w-full h-12 text-center text-white font-black text-xl" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Libras (lb)</label>
+                            <input type="number" id="convLb" oninput="app.convertWeight('lb')" class="input-field w-full h-12 text-center text-white font-black text-xl" placeholder="0">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card p-5">
@@ -1741,6 +1768,21 @@ const app = {
                     </div>
                 `;
             }).join('');
+        }
+    },
+
+    convertWeight(from) {
+        const kgInput = document.getElementById('convKg');
+        const lbInput = document.getElementById('convLb');
+        if (!kgInput || !lbInput) return;
+        if (from === 'kg') {
+            const kg = parseFloat(kgInput.value);
+            if (!isNaN(kg)) lbInput.value = (kg * 2.20462).toFixed(2);
+            else lbInput.value = '';
+        } else {
+            const lb = parseFloat(lbInput.value);
+            if (!isNaN(lb)) kgInput.value = (lb / 2.20462).toFixed(2);
+            else kgInput.value = '';
         }
     },
 
