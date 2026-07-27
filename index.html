@@ -281,6 +281,8 @@ const DEFAULT_EXERCISES = [
 const Storage = {
     get(key) { try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; } },
     set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
+    getPreferredFormula() { return localStorage.getItem('preferredFormula') || 'avg'; },
+    setPreferredFormula(val) { localStorage.setItem('preferredFormula', val); },
     init() {
         let cats = Storage.get('categories');
         if (!cats) {
@@ -1668,14 +1670,14 @@ const app = {
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider">% del 1RM</h3>
                         <select id="rmFormulaSelect" onchange="app.calculateRM()" class="input-field px-3 py-1.5 text-xs text-white font-bold appearance-none cursor-pointer">
-                            <option value="avg">Promedio</option>
-                            <option value="Epley">Epley</option>
-                            <option value="Brzycki">Brzycki</option>
-                            <option value="Lombardi">Lombardi</option>
-                            <option value="O'Conner">O'Conner</option>
-                            <option value="Lander">Lander</option>
-                            <option value="Mayhew">Mayhew</option>
-                            <option value="Wathan">Wathan</option>
+                            <option value="avg" ${Storage.getPreferredFormula() === 'avg' ? 'selected' : ''}>Promedio</option>
+                            <option value="Epley" ${Storage.getPreferredFormula() === 'Epley' ? 'selected' : ''}>Epley</option>
+                            <option value="Brzycki" ${Storage.getPreferredFormula() === 'Brzycki' ? 'selected' : ''}>Brzycki</option>
+                            <option value="Lombardi" ${Storage.getPreferredFormula() === 'Lombardi' ? 'selected' : ''}>Lombardi</option>
+                            <option value="O'Conner" ${Storage.getPreferredFormula() === "O'Conner" ? 'selected' : ''}>O'Conner</option>
+                            <option value="Lander" ${Storage.getPreferredFormula() === 'Lander' ? 'selected' : ''}>Lander</option>
+                            <option value="Mayhew" ${Storage.getPreferredFormula() === 'Mayhew' ? 'selected' : ''}>Mayhew</option>
+                            <option value="Wathan" ${Storage.getPreferredFormula() === 'Wathan' ? 'selected' : ''}>Wathan</option>
                         </select>
                     </div>
                     <div id="rmPercentTable" class="grid grid-cols-5 gap-2 text-center"></div>
@@ -1749,7 +1751,9 @@ const app = {
 
         document.getElementById('rmAverage').textContent = avg > 0 ? avg.toFixed(1) : '--';
 
-        const selectedFormula = document.getElementById('rmFormulaSelect')?.value || 'avg';
+        const selectEl = document.getElementById('rmFormulaSelect');
+        const selectedFormula = selectEl?.value || 'avg';
+        if (selectEl) Storage.setPreferredFormula(selectedFormula);
         let baseRM = avg;
         if (selectedFormula !== 'avg') {
             const selected = results.find(r => r.name === selectedFormula);
