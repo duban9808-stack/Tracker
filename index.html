@@ -1392,7 +1392,7 @@ const app = {
                         <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Grupo</label>
                         <select id="newExMuscle" class="input-field w-full px-4 py-3 text-white font-semibold text-sm appearance-none cursor-pointer">
                             <option>Pecho</option><option>Hombro</option><option>Espalda</option><option>Piernas</option>
-                            <option>Bíceps</option><option>Tríceps</option><option>Abdomen</option><option>Glúteos</option>
+                            <option>Bíceps</option><option>Tríceps</option><option>Antebrazo</option><option>Abdomen</option><option>Glúteos</option>
                             <option>Isquiotibiales</option><option>Hombro Posterior</option><option>Trapecio</option><option>Pantorrilla</option>
                         </select>
                     </div>
@@ -1467,6 +1467,7 @@ const app = {
                             <option ${ex.muscleGroup === 'Piernas' ? 'selected' : ''}>Piernas</option>
                             <option ${ex.muscleGroup === 'Bíceps' ? 'selected' : ''}>Bíceps</option>
                             <option ${ex.muscleGroup === 'Tríceps' ? 'selected' : ''}>Tríceps</option>
+                            <option ${ex.muscleGroup === 'Antebrazo' ? 'selected' : ''}>Antebrazo</option>
                             <option ${ex.muscleGroup === 'Abdomen' ? 'selected' : ''}>Abdomen</option>
                             <option ${ex.muscleGroup === 'Glúteos' ? 'selected' : ''}>Glúteos</option>
                             <option ${ex.muscleGroup === 'Isquiotibiales' ? 'selected' : ''}>Isquiotibiales</option>
