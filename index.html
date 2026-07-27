@@ -666,7 +666,7 @@ const app = {
                             <select id="inputRIR" class="input-field w-full h-12 text-center text-white font-bold text-lg appearance-none cursor-pointer">
                                 <option value="0">0</option>
                                 <option value="0.5">0.5</option>
-                                <option value="1" selected>1</option>
+                                <option value="0" selected>0</option>
                                 <option value="1.5">1.5</option>
                                 <option value="2">2</option>
                                 <option value="2.5">2.5</option>
@@ -715,7 +715,7 @@ const app = {
                                             <div class="flex items-center gap-2">
                                                 ${isNewRecord ? `<span class="text-[10px] font-bold text-success bg-success/10 px-2 py-1 rounded-lg"><i class="fas fa-crown mr-1"></i>Récord</span>` : ''}
                                                 <span class="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-1 rounded-lg">RM ${rm.toFixed(1)}</span>
-                                                <button onclick="app.deleteEntry('${entry.tempId}')" class="touch text-danger/60 hover:text-danger w-7 h-7 flex items-center justify-center rounded-lg hover:bg-danger/10 transition-colors"><i class="fas fa-trash text-xs"></i></button>
+                                                <button onclick="app.showEntryActions('${entry.tempId}')" class="touch text-textMuted hover:text-text w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"><i class="fas fa-ellipsis-v text-xs"></i></button>
                                             </div>
                                         </div>`;
                                     }).join('')}
@@ -1753,6 +1753,111 @@ const app = {
         document.getElementById('rmReps').value = lastEntry.reps;
         this.calculateRM();
         this.showToast('Datos cargados');
+    },
+
+
+    showEntryActions(tempId) {
+        const entry = this.currentWorkout.entries.find(e => e.tempId === tempId);
+        if (!entry) return;
+        const ex = this.exercises.find(e => e.id === entry.exerciseId);
+        const modal = document.getElementById('modalContent');
+        modal.innerHTML = `
+            <h3 class="text-xl font-black text-text mb-1 tracking-tight">Serie ${entry.seriesNum}</h3>
+            <p class="text-textSecondary text-sm mb-6">${ex?.name || 'Ejercicio'}</p>
+            <div class="space-y-3">
+                <button onclick="app.closeModal(); app.editEntry('${tempId}')" class="touch w-full py-3.5 bg-primary/15 hover:bg-primary/25 text-primary font-bold rounded-2xl text-sm transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-pen"></i>Editar serie
+                </button>
+                <button onclick="app.confirmDeleteEntry('${tempId}')" class="touch w-full py-3.5 bg-danger/10 hover:bg-danger/15 text-danger font-bold rounded-2xl text-sm transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-trash"></i>Eliminar serie
+                </button>
+                <button onclick="app.closeModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-2xl text-sm transition-colors">
+                    Cancelar
+                </button>
+            </div>
+        `;
+        document.getElementById('modalOverlay').classList.remove('hidden');
+    },
+
+    confirmDeleteEntry(tempId) {
+        const entry = this.currentWorkout.entries.find(e => e.tempId === tempId);
+        if (!entry) return;
+        const modal = document.getElementById('modalContent');
+        modal.innerHTML = `
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 rounded-full bg-danger/10 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-trash text-danger text-xl"></i>
+                </div>
+                <h3 class="text-xl font-black text-text tracking-tight">¿Eliminar serie?</h3>
+                <p class="text-sm text-textSecondary mt-1">Esta acción no se puede deshacer</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="app.closeModal()" class="touch flex-1 py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">Cancelar</button>
+                <button onclick="app.closeModal(); app.deleteEntry('${tempId}')" class="touch flex-1 py-3 bg-danger hover:bg-danger/90 text-white font-bold rounded-xl text-sm transition-colors">Eliminar</button>
+            </div>
+        `;
+    },
+
+    editEntry(tempId) {
+        const entry = this.currentWorkout.entries.find(e => e.tempId === tempId);
+        if (!entry) return;
+        const ex = this.exercises.find(e => e.id === entry.exerciseId);
+        const modal = document.getElementById('modalContent');
+        modal.innerHTML = `
+            <h3 class="text-xl font-black text-text mb-1 tracking-tight">Editar serie</h3>
+            <p class="text-textSecondary text-sm mb-5">${ex?.name || 'Ejercicio'} — Serie ${entry.seriesNum}</p>
+            <div class="space-y-4">
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Peso kg</label>
+                        <input type="number" id="editWeight" value="${entry.weight}" class="input-field w-full h-12 text-center text-white font-black text-xl">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Reps</label>
+                        <input type="number" id="editReps" value="${entry.reps}" class="input-field w-full h-12 text-center text-white font-black text-xl">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">RIR</label>
+                        <select id="editRIR" class="input-field w-full h-12 text-center text-white font-bold text-lg appearance-none cursor-pointer">
+                            <option value="0" ${entry.rir === 0 ? 'selected' : ''}>0</option>
+                            <option value="0.5" ${entry.rir === 0.5 ? 'selected' : ''}>0.5</option>
+                            <option value="1" ${entry.rir === 1 ? 'selected' : ''}>1</option>
+                            <option value="1.5" ${entry.rir === 1.5 ? 'selected' : ''}>1.5</option>
+                            <option value="2" ${entry.rir === 2 ? 'selected' : ''}>2</option>
+                            <option value="2.5" ${entry.rir === 2.5 ? 'selected' : ''}>2.5</option>
+                            <option value="3" ${entry.rir === 3 ? 'selected' : ''}>3</option>
+                            <option value="4" ${entry.rir === 4 ? 'selected' : ''}>4</option>
+                            <option value="5" ${entry.rir === 5 ? 'selected' : ''}>5</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="app.closeModal()" class="touch flex-1 py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">Cancelar</button>
+                    <button onclick="app.saveEditEntry('${tempId}')" class="touch flex-1 btn-primary py-3 text-sm">Guardar</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('modalOverlay').classList.remove('hidden');
+    },
+
+    saveEditEntry(tempId) {
+        const weight = parseFloat(document.getElementById('editWeight').value);
+        const reps = parseInt(document.getElementById('editReps').value);
+        const rir = parseFloat(document.getElementById('editRIR').value);
+        if (!weight || !reps || weight <= 0 || reps <= 0) {
+            this.showToast('Ingresa valores válidos', 'error');
+            return;
+        }
+        this.currentWorkout.entries = this.currentWorkout.entries.map(e => {
+            if (e.tempId === tempId) {
+                return { ...e, weight, reps, rir };
+            }
+            return e;
+        });
+        Storage.setCurrentWorkout(this.currentWorkout);
+        this.closeModal();
+        this.showToast('Serie actualizada ✏️');
+        this.renderWorkout();
     },
 
     closeModal() {
