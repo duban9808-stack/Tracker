@@ -1780,15 +1780,30 @@ const app = {
     convertWeight(from) {
         const kgInput = document.getElementById('convKg');
         const lbInput = document.getElementById('convLb');
+        const rmWeight = document.getElementById('rmWeight');
         if (!kgInput || !lbInput) return;
+        let kgVal = null;
         if (from === 'kg') {
             const kg = parseFloat(kgInput.value);
-            if (!isNaN(kg)) lbInput.value = (kg * 2.20462).toFixed(2);
-            else lbInput.value = '';
+            if (!isNaN(kg)) {
+                lbInput.value = (kg * 2.20462).toFixed(2);
+                kgVal = kg;
+            } else {
+                lbInput.value = '';
+            }
         } else {
             const lb = parseFloat(lbInput.value);
-            if (!isNaN(lb)) kgInput.value = (lb / 2.20462).toFixed(2);
-            else kgInput.value = '';
+            if (!isNaN(lb)) {
+                kgVal = lb / 2.20462;
+                kgInput.value = kgVal.toFixed(2);
+            } else {
+                kgInput.value = '';
+            }
+        }
+        // Pasar el valor kg a la calculadora RM y recalcular
+        if (rmWeight && kgVal !== null && !isNaN(kgVal)) {
+            rmWeight.value = Math.round(kgVal * 10) / 10;
+            this.calculateRM();
         }
     },
 
