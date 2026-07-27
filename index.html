@@ -289,6 +289,11 @@ const Storage = {
     set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
     getPreferredFormula() { return localStorage.getItem('preferredFormula') || 'avg'; },
     setPreferredFormula(val) { localStorage.setItem('preferredFormula', val); },
+    getSheetsConfig() { 
+        try { return JSON.parse(localStorage.getItem('sheetsConfig')) || { url: '', autoSave: false }; } 
+        catch { return { url: '', autoSave: false }; }
+    },
+    setSheetsConfig(val) { localStorage.setItem('sheetsConfig', JSON.stringify(val)); },
     init() {
         let cats = Storage.get('categories');
         if (!cats) {
@@ -841,16 +846,82 @@ const app = {
         this.renderWorkout();
     },
 
+    async sendToSheets(workout) {
+        const config = Storage.getSheetsConfig();
+        if (!config.url) {
+            this.showToast('Configura la URL de Google Sheets primero', 'error');
+            return false;
+        }
+        const cat = this.categories.find(c => c.id === workout.categoryId);
+        const isRest = workout.isRest || cat?.id === 'cat5';
+        const rows = [];
+        if (isRest) {
+            rows.push({
+                fecha: new Date(workout.date).toLocaleDateString('es-ES'),
+                categoria: cat?.name || 'Descanso',
+                tipo: 'Descanso',
+                ejercicio: '-',
+                grupo: '-',
+                tipo_ej: '-',
+                serie: '-',
+                peso: '-',
+                reps: '-',
+                rir: '-',
+                volumen: '-',
+                rm: '-'
+            });
+        } else {
+            workout.entries?.forEach(e => {
+                const ex = this.exercises.find(exe => exe.id === e.exerciseId);
+                rows.push({
+                    fecha: new Date(workout.date).toLocaleDateString('es-ES'),
+                    categoria: cat?.name || '-',
+                    tipo: 'Entrenamiento',
+                    ejercicio: ex?.name || '-',
+                    grupo: ex?.muscleGroup || '',
+                    tipo_ej: ex?.type || '',
+                    serie: e.seriesNum || 1,
+                    peso: e.weight,
+                    reps: e.reps,
+                    rir: e.rir || 0,
+                    volumen: e.weight * e.reps,
+                    rm: this.calcRM(e.weight, e.reps).toFixed(2)
+                });
+            });
+        }
+        try {
+            const res = await fetch(config.url, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rows })
+            });
+            this.showToast('Guardado en Google Sheets ✅');
+            return true;
+        } catch (err) {
+            this.showToast('Error al guardar en Sheets', 'error');
+            console.error(err);
+            return false;
+        }
+    },
+
     finishWorkout() {
         if (this.currentWorkout.entries.length === 0 && !this.currentWorkout.isRest) {
             this.showToast('Agrega al menos una serie', 'error');
             return;
         }
         this.workouts = [...this.workouts, this.currentWorkout];
+        const savedWorkout = this.currentWorkout;
         this.currentWorkout = null;
+        Storage.clearCurrentWorkout();
         const last = this.workouts[this.workouts.length - 1];
         const msg = last.isRest ? 'Descanso registrado 🛌' : 'Entrenamiento guardado 💪';
         this.showToast(msg);
+        // Auto-guardar en Sheets si está configurado
+        const config = Storage.getSheetsConfig();
+        if (config.autoSave && config.url) {
+            this.sendToSheets(savedWorkout);
+        }
         this.showView('dashboard');
     },
 
@@ -1058,7 +1129,10 @@ const app = {
                                         </div>`;
                                     }).join('')}
                                 </div>
-                                <button onclick="app.deleteWorkout('${w.id}')" class="touch w-full mt-3 py-2.5 bg-danger/10 hover:bg-danger/15 text-danger rounded-xl text-xs font-bold transition-colors">
+                                <button onclick="app.sendWorkoutToSheets('${w.id}')" class="touch w-full mt-3 py-2.5 bg-green-500/10 hover:bg-green-500/15 text-green-400 rounded-xl text-xs font-bold transition-colors">
+                                    <i class="fas fa-cloud-upload-alt mr-1"></i>Guardar en Sheets
+                                </button>
+                                <button onclick="app.deleteWorkout('${w.id}')" class="touch w-full mt-2 py-2.5 bg-danger/10 hover:bg-danger/15 text-danger rounded-xl text-xs font-bold transition-colors">
                                     <i class="fas fa-trash mr-1"></i>Eliminar sesión
                                 </button>
                             </div>`;
@@ -1067,6 +1141,12 @@ const app = {
                 </div>
             </div>
         `;
+    },
+
+    async sendWorkoutToSheets(workoutId) {
+        const workout = this.workouts.find(w => w.id === workoutId);
+        if (!workout) return;
+        await this.sendToSheets(workout);
     },
 
     deleteWorkout(id) {
@@ -1338,8 +1418,45 @@ const app = {
 
     renderDataTab() {
         const totalSeries = this.workouts.reduce((s, w) => s + (w.entries?.length || 0), 0);
+        const sheetsConfig = Storage.getSheetsConfig();
         return `
             <div class="space-y-4">
+                <!-- Google Sheets -->
+                <div class="card p-5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                            <i class="fas fa-table text-green-400 text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-text">Google Sheets</div>
+                            <div class="text-xs text-textMuted">Sincroniza en la nube</div>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">URL del Web App</label>
+                            <input type="text" id="sheetsUrl" value="${sheetsConfig.url || ''}" placeholder="https://script.google.com/macros/s/..." class="input-field w-full px-4 py-3 text-white font-bold text-sm">
+                        </div>
+                        <div class="flex items-center justify-between bg-white/3 rounded-xl px-4 py-3">
+                            <div>
+                                <div class="text-sm font-bold text-text">Guardado automático</div>
+                                <div class="text-xs text-textMuted">Al finalizar entrenamiento</div>
+                            </div>
+                            <button onclick="app.toggleSheetsAuto()" id="sheetsAutoToggle" class="touch w-12 h-7 rounded-full transition-all duration-200 ${sheetsConfig.autoSave ? 'bg-success' : 'bg-white/10'} relative">
+                                <div class="w-5 h-5 rounded-full bg-white absolute top-1 transition-all duration-200 ${sheetsConfig.autoSave ? 'left-6' : 'left-1'}"></div>
+                            </button>
+                        </div>
+                        <button onclick="app.saveSheetsConfig()" class="touch btn-primary w-full py-3 text-sm">
+                            <i class="fas fa-save mr-2"></i>Guardar configuración
+                        </button>
+                        ${sheetsConfig.url ? `
+                        <button onclick="app.testSheetsConnection()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">
+                            <i class="fas fa-plug mr-2"></i>Probar conexión
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+
                 <div class="card p-5">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -1572,6 +1689,42 @@ const app = {
         this.exercises = this.exercises.filter(e => e.id !== id);
         this.showSettingsTab('exercises');
         this.showToast('Ejercicio eliminado');
+    },
+
+    saveSheetsConfig() {
+        const url = document.getElementById('sheetsUrl')?.value.trim() || '';
+        const config = Storage.getSheetsConfig();
+        config.url = url;
+        Storage.setSheetsConfig(config);
+        this.showToast('Configuración guardada');
+        this.showSettingsTab('data');
+    },
+
+    toggleSheetsAuto() {
+        const config = Storage.getSheetsConfig();
+        config.autoSave = !config.autoSave;
+        Storage.setSheetsConfig(config);
+        this.showSettingsTab('data');
+    },
+
+    async testSheetsConnection() {
+        const config = Storage.getSheetsConfig();
+        if (!config.url) {
+            this.showToast('Ingresa la URL del Web App', 'error');
+            return;
+        }
+        this.showToast('Probando conexión...');
+        try {
+            await fetch(config.url, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ test: true, rows: [] })
+            });
+            this.showToast('Conexión exitosa ✅');
+        } catch (err) {
+            this.showToast('Error de conexión', 'error');
+        }
     },
 
     exportToCSV() {
