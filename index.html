@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0f1a">
+    <title>Tracker Fuerza</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        bg: '#0a0f1a',
+                        surface: '#111827',
+                        surfaceHover: '#1a2236',
+                        border: 'rgba(255,255,255,0.06)',
+                        borderHover: 'rgba(255,255,255,0.12)',
+                        primary: '#3b82f6',
+                        primaryHover: '#2563eb',
+                        success: '#22c55e',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        text: '#f9fafb',
+                        textSecondary: '#9ca3af',
+                        textMuted: '#6b7280',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: #0a0f1a; color: #f9fafb; overscroll-behavior-y: none; }
+
+        /* Scrollbar hide */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Touch feedback */
+        .touch { transition: transform 0.12s ease, opacity 0.12s ease; }
+        .touch:active { transform: scale(0.97); opacity: 0.9; }
+
+        /* Animations */
+        .fade-up { animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+        .stagger-1 { animation-delay: 0.05s; }
+        .stagger-2 { animation-delay: 0.10s; }
+        .stagger-3 { animation-delay: 0.15s; }
+        .stagger-4 { animation-delay: 0.20s; }
+        .stagger-5 { animation-delay: 0.25s; }
+
+        /* Glass nav */
+        .nav-glass { background: rgba(10, 15, 26, 0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+
+        /* Card styles */
+        .card {
+            background: #111827;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            transition: all 0.2s ease;
+        }
+        .card:hover { border-color: rgba(255,255,255,0.10); }
+
+        /* Input styles */
+        .input-field {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            transition: all 0.2s ease;
+        }
+        .input-field:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); outline: none; }
+
+        /* Button primary */
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-radius: 16px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px rgba(59,130,246,0.25);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(59,130,246,0.35); }
+        .btn-primary:active { transform: translateY(0); }
+
+        /* Button ghost */
+        .btn-ghost {
+            background: rgba(255,255,255,0.05);
+            border-radius: 14px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.10); }
+
+        /* Category card */
+        .cat-card {
+            background: linear-gradient(145deg, #111827 0%, #0d1320 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cat-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--cat-color, rgba(255,255,255,0.12));
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--cat-color, transparent);
+        }
+        .cat-card:active { transform: translateY(-1px) scale(0.98); }
+
+        /* Series row */
+        .series-row {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            border-left: 3px solid var(--cat-color, #3b82f6);
+            transition: all 0.15s ease;
+        }
+        .series-row:hover { background: rgba(255,255,255,0.05); }
+
+        /* Nav item */
+        .nav-item { position: relative; transition: all 0.2s ease; }
+        .nav-item.active { color: #3b82f6; }
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: #3b82f6;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(59,130,246,0.6);
+        }
+
+        /* Number input hide spinners */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        /* Chart container */
+        .chart-box { position: relative; height: 200px; width: 100%; }
+
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        /* Record indicator */
+        .record-flash {
+            animation: recordFlash 0.6s ease-out;
+        }
+        @keyframes recordFlash {
+            0% { background: rgba(34,197,94,0.2); }
+            100% { background: transparent; }
+        }
+
+        /* Toast */
+        .toast-enter { animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(0.95); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+        }
+
+        /* Modal overlay */
+        .modal-bg { background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); }
+
+        /* Rest day card */
+        .rest-card {
+            background: linear-gradient(135deg, rgba(17,24,39,0.9) 0%, rgba(10,15,26,0.95) 100%);
+            border: 1px solid rgba(148,163,184,0.15);
+            border-radius: 24px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-28">
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 nav-glass border-b border-white/5">
+        <div class="flex items-center justify-between px-5 py-4 max-w-lg mx-auto">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+                    <i class="fas fa-dumbbell text-primary text-sm"></i>
+                </div>
+                <span class="font-bold text-base tracking-tight">Tracker</span>
+            </div>
+            <button onclick="app.newWorkout()" class="touch btn-primary text-white px-5 py-2.5 text-sm flex items-center gap-2">
+                <i class="fas fa-plus text-xs"></i>Entrenar
+            </button>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main id="mainContent" class="pt-20 px-5 max-w-lg mx-auto"></main>
+
+    <!-- Bottom Nav -->
+    <nav class="fixed bottom-0 left-0 right-0 z-50 nav-glass border-t border-white/5">
+        <div class="flex justify-around items-center py-3 max-w-lg mx-auto">
+            <button onclick="app.showView('dashboard')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="dashboard">
+                <i class="fas fa-home text-lg"></i>
+                <span class="text-[10px] font-semibold">Inicio</span>
+            </button>
+            <button onclick="app.showView('workout')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="workout">
+                <i class="fas fa-dumbbell text-lg"></i>
+                <span class="text-[10px] font-semibold">Entrenar</span>
+            </button>
+            <button onclick="app.showView('history')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="history">
+                <i class="fas fa-list text-lg"></i>
+                <span class="text-[10px] font-semibold">Historial</span>
+            </button>
+            <button onclick="app.showView('progress')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="progress">
+                <i class="fas fa-chart-line text-lg"></i>
+                <span class="text-[10px] font-semibold">Progreso</span>
+            </button>
+            <button onclick="app.showView('rmcalc')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="rmcalc">
+                <i class="fas fa-calculator text-lg"></i>
+                <span class="text-[10px] font-semibold">RM</span>
+            </button>
+            <button onclick="app.showView('settings')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="settings">
+                <i class="fas fa-cog text-lg"></i>
+                <span class="text-[10px] font-semibold">Más</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Modal -->
+    <div id="modalOverlay" class="fixed inset-0 modal-bg z-[60] hidden flex items-end sm:items-center justify-center p-4">
+        <div id="modalContent" class="bg-surface border border-white/10 rounded-3xl w-full max-w-sm max-h-[85vh] overflow-y-auto p-6 shadow-2xl"></div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-24 left-1/2 z-[70] px-5 py-3 rounded-2xl shadow-2xl font-bold text-sm hidden flex items-center gap-2.5 toast-enter">
+        <i class="fas fa-check-circle text-lg"></i>
+        <span id="toastMsg"></span>
+    </div>
+
+<script>
+
+const DEFAULT_CATEGORIES = [
+    { id: 'cat1', name: 'Empuje', color: '#ef4444', icon: 'fa-hand-fist' },
+    { id: 'cat2', name: 'Tracción', color: '#06b6d4', icon: 'fa-hand-back-fist' },
+    { id: 'cat3', name: 'Pierna', color: '#3b82f6', icon: 'fa-person-running' },
+    { id: 'cat4', name: 'Otros', color: '#22c55e', icon: 'fa-spa' },
+    { id: 'cat5', name: 'Descanso', color: '#94a3b8', icon: 'fa-bed' }
+];
+
+const DEFAULT_EXERCISES = [
+    { id: 'e1', name: 'Press Banca Plano', muscleGroup: 'Pecho', type: 'Compuesto', categoryIds: ['cat1'], notes: '' },
+    { id: 'e2', name: 'Press Banca Inclinado', muscleGroup: 'Pecho', type: 'Compuesto', categoryIds: ['cat1'], notes: '' },
+    { id: 'e3', name: 'Aperturas Mancuernas', muscleGroup: 'Pecho', type: 'Aislado', categoryIds: ['cat1'], notes: '' },
+    { id: 'e4', name: 'Press Militar Barra', muscleGroup: 'Hombro', type: 'Compuesto', categoryIds: ['cat1','cat2'], notes: '' },
+    { id: 'e5', name: 'Elevaciones Laterales', muscleGroup: 'Hombro', type: 'Aislado', categoryIds: ['cat1'], notes: '' },
+    { id: 'e6', name: 'Fondos Paralelas', muscleGroup: 'Tríceps', type: 'Compuesto', categoryIds: ['cat1'], notes: '' },
+    { id: 'e7', name: 'Extensiones Tríceps', muscleGroup: 'Tríceps', type: 'Aislado', categoryIds: ['cat1'], notes: '' },
+    { id: 'e8', name: 'Remo Barra', muscleGroup: 'Espalda', type: 'Compuesto', categoryIds: ['cat2'], notes: '' },
+    { id: 'e9', name: 'Dominadas', muscleGroup: 'Espalda', type: 'Compuesto', categoryIds: ['cat2'], notes: '' },
+    { id: 'e10', name: 'Jalón al Pecho', muscleGroup: 'Espalda', type: 'Compuesto', categoryIds: ['cat2'], notes: '' },
+    { id: 'e11', name: 'Remo Mancuerna', muscleGroup: 'Espalda', type: 'Aislado', categoryIds: ['cat2'], notes: '' },
+    { id: 'e12', name: 'Face Pull', muscleGroup: 'Hombro Posterior', type: 'Aislado', categoryIds: ['cat2'], notes: '' },
+    { id: 'e13', name: 'Curl Bíceps Barra', muscleGroup: 'Bíceps', type: 'Aislado', categoryIds: ['cat2'], notes: '' },
+    { id: 'e14', name: 'Curl Martillo', muscleGroup: 'Bíceps', type: 'Aislado', categoryIds: ['cat2'], notes: '' },
+    { id: 'e15', name: 'Sentadilla Barra', muscleGroup: 'Piernas', type: 'Compuesto', categoryIds: ['cat3'], notes: '' },
+    { id: 'e16', name: 'Prensa Piernas', muscleGroup: 'Piernas', type: 'Compuesto', categoryIds: ['cat3'], notes: '' },
+    { id: 'e17', name: 'Peso Muerto', muscleGroup: 'Piernas', type: 'Compuesto', categoryIds: ['cat3','cat2'], notes: '' },
+    { id: 'e18', name: 'Hip Thrust', muscleGroup: 'Glúteos', type: 'Compuesto', categoryIds: ['cat3'], notes: '' },
+    { id: 'e19', name: 'Extensiones Cuádriceps', muscleGroup: 'Piernas', type: 'Aislado', categoryIds: ['cat3'], notes: '' },
+    { id: 'e20', name: 'Curl Femoral', muscleGroup: 'Piernas', type: 'Aislado', categoryIds: ['cat3'], notes: '' },
+    { id: 'e21', name: 'Calf Raises', muscleGroup: 'Pantorrilla', type: 'Aislado', categoryIds: ['cat3'], notes: '' },
+    { id: 'e22', name: 'Crunch', muscleGroup: 'Abdomen', type: 'Aislado', categoryIds: ['cat4'], notes: '' },
+    { id: 'e23', name: 'Plancha', muscleGroup: 'Abdomen', type: 'Aislado', categoryIds: ['cat4'], notes: '' },
+    { id: 'e24', name: 'Encogimientos Trapecio', muscleGroup: 'Trapecio', type: 'Aislado', categoryIds: ['cat4','cat2'], notes: '' }
+];
+
+const Storage = {
+    get(key) { try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; } },
+    set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
+    init() {
+        let cats = Storage.get('categories');
+        if (!cats) {
+            Storage.set('categories', DEFAULT_CATEGORIES);
+        } else {
+            const hasRest = cats.some(c => c.id === 'cat5');
+            if (!hasRest) {
+                cats.push({ id: 'cat5', name: 'Descanso', color: '#94a3b8', icon: 'fa-bed' });
+                Storage.set('categories', cats);
+            }
+        }
+        let exs = Storage.get('exercises');
+        if (!exs) {
+            Storage.set('exercises', DEFAULT_EXERCISES);
+        } else {
+            const migrated = exs.map(e => {
+                if (e.categoryId && !e.categoryIds) {
+                    return { ...e, categoryIds: [e.categoryId], categoryId: undefined };
+                }
+                return e;
+            });
+            Storage.set('exercises', migrated);
+        }
+        if (!Storage.get('workouts')) Storage.set('workouts', []);
+    }
+};
+
+const app = {
+    currentView: 'dashboard',
+    currentWorkout: null,
+
+    init() {
+        Storage.init();
+        this.showView('dashboard');
+    },
+
+    get categories() { return Storage.get('categories') || []; },
+    set categories(v) { Storage.set('categories', v); },
+    get exercises() { return Storage.get('exercises') || []; },
+    set exercises(v) { Storage.set('exercises', v); },
+    get workouts() { return Storage.get('workouts') || []; },
+    set workouts(v) { Storage.set('workouts', v); },
+
+    getCategoryBadges(exerciseId) {
+        const ex = this.exercises.find(e => e.id === exerciseId);
+        if (!ex || !ex.categoryIds || ex.categoryIds.length === 0) return '';
+        return ex.categoryIds.map(cid => {
+            const cat = this.categories.find(c => c.id === cid);
+            if (!cat) return '';
+            return `<span class="badge" style="background:${cat.color}15; color:${cat.color}; border:1px solid ${cat.color}25">${cat.name}</span>`;
+        }).join(' ');
+    },
+
+    showView(view) {
+        this.currentView = view;
+        document.querySelectorAll('.nav-item').forEach(b => {
+            const isActive = b.dataset.view === view;
+            b.classList.toggle('active', isActive);
+            b.classList.toggle('text-primary', isActive);
+            b.classList.toggle('text-textMuted', !isActive);
+        });
+        const main = document.getElementById('mainContent');
+        main.innerHTML = '';
+        main.className = 'pt-20 px-5 max-w-lg mx-auto fade-up';
+        switch(view) {
+            case 'dashboard': this.renderDashboard(); break;
+            case 'workout': this.renderWorkout(); break;
+            case 'history': this.renderHistory(); break;
+            case 'progress': this.renderProgress(); break;
+            case 'settings': this.renderSettings(); break;
+            case 'rmcalc': this.renderRMCalculator(); break;
+        }
+    },
+
+    renderDashboard() {
+        const workouts = this.workouts;
+        const totalSessions = workouts.length;
+        const restDays = workouts.filter(w => w.isRest || w.categoryId === 'cat5').length;
+        const trainDays = totalSessions - restDays;
+        const totalSeries = workouts.reduce((sum, w) => sum + (w.entries?.length || 0), 0);
+        const totalVolume = workouts.reduce((sum, w) => sum + (w.entries?.reduce((s, e) => s + (e.weight * e.reps), 0) || 0), 0);
+        const allRMs = workouts.flatMap(w => w.entries?.map(e => this.calcRM(e.weight, e.reps)) || []);
+        const bestRM = allRMs.length ? Math.max(...allRMs).toFixed(1) : 0;
+        const lastWorkout = workouts.length ? [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date))[0] : null;
+        const lastDate = lastWorkout ? new Date(lastWorkout.date).toLocaleDateString('es-ES', {day:'numeric', month:'short'}) : null;
+
+        document.getElementById('mainContent').innerHTML = `
+            <div class="space-y-6 pb-8">
+
+                <!-- Hero: Último entrenamiento -->
+                <div class="fade-up">
+                    ${lastWorkout ? (() => {
+                        const cat = this.categories.find(c => c.id === lastWorkout.categoryId);
+                        const isRest = lastWorkout.isRest || cat?.id === 'cat5';
+                        const vol = lastWorkout.entries?.reduce((s,e) => s + e.weight * e.reps, 0) || 0;
+                        return `
+                        <div class="card p-5" style="background: linear-gradient(135deg, ${isRest ? '#1e293b' : cat?.color + '12'} 0%, #111827 100%); border-color: ${isRest ? 'rgba(255,255,255,0.06)' : cat?.color + '30'}">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[10px] font-bold text-textMuted uppercase tracking-widest">Última sesión · ${lastDate}</span>
+                                <div class="w-2 h-2 rounded-full" style="background: ${cat?.color || '#6b7280'}; box-shadow: 0 0 8px ${cat?.color || '#6b7280'}60"></div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style="background: ${cat?.color}18; color: ${cat?.color}">
+                                    <i class="fas ${cat?.icon || 'fa-dumbbell'}"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-black text-text tracking-tight">${cat?.name || 'Sin categoría'}</h2>
+                                    <p class="text-sm text-textSecondary font-medium mt-0.5">${isRest ? 'Día de recuperación' : `${lastWorkout.entries?.length || 0} series · ${vol.toLocaleString()} kg`}</p>
+                                </div>
+                            </div>
+                        </div>`;
+                    })() : `
+                        <div class="card p-8 text-center">
+                            <div class="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-dumbbell text-primary text-2xl"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-text">Comienza tu primer entrenamiento</h2>
+                            <p class="text-sm text-textSecondary mt-1">Toca Entrenar para registrar tu progreso</p>
+                        </div>
+                    `}
+                </div>
+
+                <!-- KPIs horizontales -->
+                <div class="fade-up stagger-1">
+                    <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                        <div class="flex-shrink-0 card p-4 min-w-[110px] text-center">
+                            <div class="text-2xl font-black text-primary">${trainDays}</div>
+                            <div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mt-1">Entrenos</div>
+                        </div>
+                        <div class="flex-shrink-0 card p-4 min-w-[110px] text-center">
+                            <div class="text-2xl font-black text-success">${restDays}</div>
+                            <div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mt-1">Descansos</div>
+                        </div>
+                        <div class="flex-shrink-0 card p-4 min-w-[110px] text-center">
+                            <div class="text-2xl font-black text-warning">${totalSeries}</div>
+                            <div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mt-1">Series</div>
+                        </div>
+                        <div class="flex-shrink-0 card p-4 min-w-[110px] text-center">
+                            <div class="text-2xl font-black text-purple-400">${bestRM}</div>
+                            <div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mt-1">Mejor RM</div>
+                        </div>
+                        <div class="flex-shrink-0 card p-4 min-w-[110px] text-center">
+                            <div class="text-2xl font-black text-text">${(totalVolume/1000).toFixed(1)}k</div>
+                            <div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mt-1">Volumen</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen por categoría -->
+                <div class="fade-up stagger-2">
+                    <h3 class="text-sm font-bold text-textSecondary uppercase tracking-wider mb-3">Por categoría</h3>
+                    <div class="space-y-2">
+                        ${this.categories.filter(c => c.id !== 'cat5').map(cat => {
+                            const catWorkouts = workouts.filter(w => w.categoryId === cat.id && !w.isRest);
+                            const catVolume = catWorkouts.reduce((sum, w) => sum + (w.entries?.reduce((s, e) => s + e.weight * e.reps, 0) || 0), 0);
+                            const catSeries = catWorkouts.reduce((sum, w) => sum + (w.entries?.length || 0), 0);
+                            const totalCatVol = this.categories.filter(c => c.id !== 'cat5').reduce((sum, c) => {
+                                const cw = workouts.filter(w => w.categoryId === c.id && !w.isRest);
+                                return sum + cw.reduce((s, w) => s + (w.entries?.reduce((ss, e) => ss + e.weight * e.reps, 0) || 0), 0);
+                            }, 0) || 1;
+                            const pct = Math.round((catVolume / totalCatVol) * 100);
+                            return `
+                            <div class="card p-4 flex items-center gap-4">
+                                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background: ${cat.color}15">
+                                    <i class="fas ${cat.icon} text-lg" style="color: ${cat.color}"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <span class="font-bold text-sm text-text">${cat.name}</span>
+                                        <span class="text-xs font-black" style="color: ${cat.color}">${catVolume.toLocaleString()} <span class="text-textMuted font-medium">kg</span></span>
+                                    </div>
+                                    <div class="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full transition-all duration-700" style="width: ${pct}%; background: ${cat.color}; box-shadow: 0 0 6px ${cat.color}40"></div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Acceso rápido -->
+                <div class="fade-up stagger-3">
+                    <h3 class="text-sm font-bold text-textSecondary uppercase tracking-wider mb-3">Acceso rápido</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="app.showView('progress')" class="touch card p-4 text-left">
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
+                                <i class="fas fa-chart-line text-purple-400 text-sm"></i>
+                            </div>
+                            <div class="font-bold text-sm text-text">Ver progreso</div>
+                            <div class="text-xs text-textMuted mt-0.5">Gráficas y récords</div>
+                        </button>
+                        <button onclick="app.showView('rmcalc')" class="touch card p-4 text-left">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-3">
+                                <i class="fas fa-calculator text-cyan-400 text-sm"></i>
+                            </div>
+                            <div class="font-bold text-sm text-text">Calcular RM</div>
+                            <div class="text-xs text-textMuted mt-0.5">7 fórmulas</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderWorkout() {
+        if (!this.currentWorkout) {
+            document.getElementById('mainContent').innerHTML = `
+                <div class="space-y-6 pb-8 fade-up">
+                    <div>
+                        <h2 class="text-2xl font-black text-text tracking-tight">Nuevo entrenamiento</h2>
+                        <p class="text-sm text-textSecondary mt-1">Elige la categoría de hoy</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        ${this.categories.map(cat => `
+                            <button onclick="app.showDatePickerModal('${cat.id}')" class="cat-card touch p-5 flex flex-col items-center gap-3 text-center" style="--cat-color: ${cat.color}30">
+                                <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl" style="background: ${cat.color}15; color: ${cat.color}; box-shadow: 0 4px 16px ${cat.color}15">
+                                    <i class="fas ${cat.icon}"></i>
+                                </div>
+                                <span class="font-bold text-sm text-text">${cat.name}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const cat = this.categories.find(c => c.id === this.currentWorkout.categoryId);
+
+        // Interfaz de descanso
+        if (this.currentWorkout.isRest) {
+            document.getElementById('mainContent').innerHTML = `
+                <div class="space-y-6 pb-8 fade-up">
+                    <div class="rest-card p-8 text-center">
+                        <div class="w-20 h-20 rounded-full bg-slate-700/30 flex items-center justify-center mx-auto mb-5" style="box-shadow: 0 0 40px ${cat.color}15">
+                            <i class="fas ${cat.icon} text-4xl" style="color: ${cat.color}"></i>
+                        </div>
+                        <h2 class="text-2xl font-black text-text tracking-tight">${cat.name}</h2>
+                        <p class="text-sm text-textSecondary mt-2">${new Date(this.currentWorkout.date).toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'})}</p>
+
+                        <div class="mt-8 space-y-4">
+                            <div class="flex items-center justify-center gap-8">
+                                <div class="text-center">
+                                    <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-2">
+                                        <i class="fas fa-moon text-textSecondary text-lg"></i>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider">Sueño</span>
+                                </div>
+                                <div class="text-center">
+                                    <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-2">
+                                        <i class="fas fa-glass-water text-textSecondary text-lg"></i>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider">Agua</span>
+                                </div>
+                                <div class="text-center">
+                                    <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-2">
+                                        <i class="fas fa-carrot text-textSecondary text-lg"></i>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider">Comida</span>
+                                </div>
+                            </div>
+
+                            <button onclick="app.finishWorkout()" class="touch btn-primary w-full py-4 text-sm mt-4">
+                                <i class="fas fa-check mr-2"></i>Registrar descanso
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const exercises = this.exercises.filter(e => e.categoryIds && e.categoryIds.includes(this.currentWorkout.categoryId));
+        const currentExerciseId = this.currentWorkout.currentExerciseId;
+        const currentExercise = this.exercises.find(e => e.id === currentExerciseId);
+        const currentEntries = this.currentWorkout.entries.filter(e => e.exerciseId === currentExerciseId);
+        const seriesNum = currentEntries.length + 1;
+        const sessionEntries = this.currentWorkout.entries;
+        const sessionVolume = sessionEntries.reduce((s, e) => s + e.weight * e.reps, 0);
+
+        document.getElementById('mainContent').innerHTML = `
+            <div class="space-y-5 pb-8 fade-up" style="--cat-color: ${cat.color}">
+
+                <!-- Header workout -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: ${cat.color}15; box-shadow: 0 0 12px ${cat.color}15">
+                            <i class="fas ${cat.icon}" style="color: ${cat.color}"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-text">${cat.name}</div>
+                            <div class="text-xs text-textMuted font-medium">${sessionEntries.length} series · ${sessionVolume.toLocaleString()} kg</div>
+                        </div>
+                    </div>
+                    <button onclick="app.finishWorkout()" class="touch bg-success/15 text-success px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-success/25 transition-colors">
+                        <i class="fas fa-check mr-1"></i>Finalizar
+                    </button>
+                </div>
+
+                <!-- Selector ejercicio -->
+                <div class="card p-4">
+                    <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Ejercicio</label>
+                    <select id="exerciseSelect" onchange="app.changeExercise(this.value)" class="input-field w-full px-4 py-3 text-white font-bold text-sm appearance-none cursor-pointer">
+                        ${exercises.map(e => `<option value="${e.id}" ${e.id === currentExerciseId ? 'selected' : ''}>${e.name}</option>`).join('')}
+                    </select>
+                    ${currentExercise ? `
+                    <div class="flex gap-2 mt-3">
+                        <span class="text-[11px] font-semibold text-textSecondary bg-white/5 px-2.5 py-1 rounded-lg">${currentExercise.muscleGroup}</span>
+                        <span class="text-[11px] font-semibold text-textSecondary bg-white/5 px-2.5 py-1 rounded-lg">${currentExercise.type}</span>
+                        ${this.getCategoryBadges(currentExercise.id)}
+                    </div>` : ''}
+                </div>
+
+                <!-- Referencia colapsable -->
+                <div>
+                    <button onclick="document.getElementById('refPanel').classList.toggle('hidden')" class="flex items-center gap-2 text-xs font-bold text-textSecondary uppercase tracking-wider mb-2">
+                        <i class="fas fa-chevron-down text-[10px] transition-transform" id="refIcon"></i>
+                        Referencia del ejercicio
+                    </button>
+                    <div id="refPanel" class="hidden card p-4 max-h-48 overflow-y-auto no-scrollbar">
+                        ${this.renderReferenceContent(cat)}
+                    </div>
+                </div>
+
+                <!-- Input serie -->
+                <div class="card p-5" style="border-color: ${cat.color}25">
+                    <div class="flex items-center justify-between mb-5">
+                        <span class="text-lg font-black text-text">Serie ${seriesNum}</span>
+                        <span class="text-xs font-bold text-textMuted bg-white/5 px-2.5 py-1 rounded-lg">${currentExercise?.name}</span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 mb-5">
+                        <div>
+                            <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Peso kg</label>
+                            <div class="flex items-center gap-1">
+                                <button onclick="app.adjustValue('weight', -2.5)" class="touch w-9 h-12 bg-white/5 hover:bg-white/10 rounded-xl text-textMuted flex items-center justify-center text-xs"><i class="fas fa-minus"></i></button>
+                                <input type="number" id="inputWeight" value="" placeholder="0" class="input-field w-full h-12 text-center text-white font-black text-xl">
+                                <button onclick="app.adjustValue('weight', 2.5)" class="touch w-9 h-12 bg-white/5 hover:bg-white/10 rounded-xl text-textMuted flex items-center justify-center text-xs"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Reps</label>
+                            <div class="flex items-center gap-1">
+                                <button onclick="app.adjustValue('reps', -1)" class="touch w-9 h-12 bg-white/5 hover:bg-white/10 rounded-xl text-textMuted flex items-center justify-center text-xs"><i class="fas fa-minus"></i></button>
+                                <input type="number" id="inputReps" value="" placeholder="0" class="input-field w-full h-12 text-center text-white font-black text-xl">
+                                <button onclick="app.adjustValue('reps', 1)" class="touch w-9 h-12 bg-white/5 hover:bg-white/10 rounded-xl text-textMuted flex items-center justify-center text-xs"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">RIR</label>
+                            <select id="inputRIR" class="input-field w-full h-12 text-center text-white font-bold text-lg appearance-none cursor-pointer">
+                                <option value="0">0</option>
+                                <option value="0.5">0.5</option>
+                                <option value="1" selected>1</option>
+                                <option value="1.5">1.5</option>
+                                <option value="2">2</option>
+                                <option value="2.5">2.5</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="app.addSeries()" class="touch btn-primary w-full py-4 text-sm" style="background: linear-gradient(135deg, ${cat.color}dd 0%, ${cat.color}aa 100%); box-shadow: 0 4px 20px ${cat.color}30">
+                        <i class="fas fa-plus-circle mr-2"></i>Agregar serie ${seriesNum}
+                    </button>
+                </div>
+
+                <!-- Series de la sesión -->
+                ${sessionEntries.length > 0 ? `
+                <div class="card p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-text">Sesión actual</h3>
+                        <span class="text-[10px] font-bold text-textMuted bg-white/5 px-2 py-1 rounded-lg">${sessionEntries.length} series</span>
+                    </div>
+                    <div class="space-y-2">
+                        ${this.groupEntriesByExercise(sessionEntries).map(group => {
+                            const ex = this.exercises.find(e => e.id === group.exerciseId);
+                            return `
+                            <div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="w-1.5 h-1.5 rounded-full" style="background: ${cat.color}"></div>
+                                    <span class="text-xs font-bold text-text">${ex?.name}</span>
+                                </div>
+                                <div class="space-y-1.5 ml-3">
+                                    ${group.entries.map((entry, idx) => {
+                                        const rm = this.calcRM(entry.weight, entry.reps);
+                                        const best = app.getBestHistoricalSeries(group.exerciseId, idx + 1);
+                                        const isNewRecord = best && (entry.weight > best.weight || (entry.weight === best.weight && entry.reps > best.reps));
+                                        return `
+                                        <div class="series-row p-3 flex items-center justify-between ${isNewRecord ? 'record-flash' : ''}">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-[10px] font-black text-textMuted bg-black/30 px-2 py-0.5 rounded">S${idx + 1}</span>
+                                                <span class="font-bold text-sm text-text">${entry.weight}<span class="text-textMuted text-xs ml-0.5">kg</span></span>
+                                                <span class="text-textMuted text-xs">×</span>
+                                                <span class="font-bold text-sm text-text">${entry.reps}</span>
+                                                ${entry.rir > 0 ? `<span class="text-[10px] text-textMuted">RIR ${entry.rir}</span>` : ''}
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                ${isNewRecord ? `<span class="text-[10px] font-bold text-success bg-success/10 px-2 py-1 rounded-lg"><i class="fas fa-crown mr-1"></i>Récord</span>` : ''}
+                                                <span class="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-1 rounded-lg">RM ${rm.toFixed(1)}</span>
+                                                <button onclick="app.deleteEntry('${entry.tempId}')" class="touch text-danger/60 hover:text-danger w-7 h-7 flex items-center justify-center rounded-lg hover:bg-danger/10 transition-colors"><i class="fas fa-trash text-xs"></i></button>
+                                            </div>
+                                        </div>`;
+                                    }).join('')}
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    },
+
+    showDatePickerModal(categoryId) {
+        const today = new Date().toISOString().split('T')[0];
+        const cat = this.categories.find(c => c.id === categoryId);
+        const modal = document.getElementById('modalContent');
+        modal.innerHTML = `
+            <h3 class="text-xl font-black text-text mb-1 tracking-tight">Nuevo entrenamiento</h3>
+            <p class="text-textSecondary text-sm mb-6">${cat?.name}</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Fecha</label>
+                    <input type="date" id="workoutDate" value="${today}" max="${today}" class="input-field w-full px-4 py-3 text-white font-bold text-sm">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="app.closeModal()" class="touch flex-1 py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">Cancelar</button>
+                    <button onclick="app.startWorkout('${categoryId}')" class="touch flex-1 btn-primary py-3 text-sm">Comenzar</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('modalOverlay').classList.remove('hidden');
+    },
+
+    startWorkout(categoryId) {
+        const isRest = categoryId === 'cat5';
+        const exercises = this.exercises.filter(e => e.categoryIds && e.categoryIds.includes(categoryId));
+        if (!isRest && exercises.length === 0) {
+            this.showToast('No hay ejercicios en esta categoría', 'error');
+            return;
+        }
+        const dateInput = document.getElementById('workoutDate');
+        const selectedDate = dateInput ? new Date(dateInput.value + 'T12:00:00') : new Date();
+        this.closeModal();
+        this.currentWorkout = {
+            id: Date.now().toString(),
+            date: selectedDate.toISOString(),
+            categoryId: categoryId,
+            currentExerciseId: exercises[0]?.id || null,
+            entries: [],
+            isRest: isRest
+        };
+        this.showView('workout');
+    },
+
+    changeExercise(exerciseId) {
+        if (this.currentWorkout) {
+            this.currentWorkout.currentExerciseId = exerciseId;
+            this.renderWorkout();
+        }
+    },
+
+    adjustValue(field, delta) {
+        const input = document.getElementById(field === 'weight' ? 'inputWeight' : 'inputReps');
+        let val = parseFloat(input.value) || 0;
+        val = Math.max(0, val + delta);
+        input.value = val;
+    },
+
+    addSeries() {
+        const weight = parseFloat(document.getElementById('inputWeight').value);
+        const reps = parseInt(document.getElementById('inputReps').value);
+        const rir = parseFloat(document.getElementById('inputRIR').value);
+        if (!weight || !reps || weight <= 0 || reps <= 0) {
+            this.showToast('Ingresa peso y repeticiones', 'error');
+            return;
+        }
+        const currentExerciseId = this.currentWorkout.currentExerciseId;
+        const seriesCount = this.currentWorkout.entries.filter(e => e.exerciseId === currentExerciseId).length;
+        this.currentWorkout.entries.push({
+            tempId: Date.now().toString(),
+            exerciseId: currentExerciseId,
+            seriesNum: seriesCount + 1,
+            weight, reps, rir, notes: ''
+        });
+        document.getElementById('inputWeight').value = '';
+        document.getElementById('inputReps').value = '';
+        document.getElementById('inputWeight').focus();
+        this.showToast(`Serie ${seriesCount + 1} agregada`);
+        this.renderWorkout();
+    },
+
+    deleteEntry(tempId) {
+        this.currentWorkout.entries = this.currentWorkout.entries.filter(e => e.tempId !== tempId);
+        const grouped = this.groupEntriesByExercise(this.currentWorkout.entries);
+        let newEntries = [];
+        grouped.forEach(g => {
+            g.entries.forEach((entry, idx) => {
+                entry.seriesNum = idx + 1;
+                newEntries.push(entry);
+            });
+        });
+        this.currentWorkout.entries = newEntries;
+        this.renderWorkout();
+    },
+
+    finishWorkout() {
+        if (this.currentWorkout.entries.length === 0 && !this.currentWorkout.isRest) {
+            this.showToast('Agrega al menos una serie', 'error');
+            return;
+        }
+        this.workouts = [...this.workouts, this.currentWorkout];
+        this.currentWorkout = null;
+        const last = this.workouts[this.workouts.length - 1];
+        const msg = last.isRest ? 'Descanso registrado 🛌' : 'Entrenamiento guardado 💪';
+        this.showToast(msg);
+        this.showView('dashboard');
+    },
+
+    groupEntriesByExercise(entries) {
+        const groups = {};
+        entries.forEach(e => {
+            if (!groups[e.exerciseId]) groups[e.exerciseId] = [];
+            groups[e.exerciseId].push(e);
+        });
+        return Object.keys(groups).map(id => ({ exerciseId: id, entries: groups[id] }));
+    },
+
+    getLastWorkoutByCategory(categoryId) {
+        const workouts = this.workouts.filter(w => w.categoryId === categoryId);
+        if (workouts.length === 0) return null;
+        return [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    },
+
+    getBestHistoricalSeries(exerciseId, seriesNum) {
+        const allEntries = this.workouts.flatMap(w => 
+            w.entries?.filter(e => e.exerciseId === exerciseId && e.seriesNum === seriesNum) || []
+        );
+        if (allEntries.length === 0) return null;
+        return allEntries.reduce((best, entry) => {
+            if (entry.weight > best.weight) return entry;
+            if (entry.weight === best.weight && entry.reps > best.reps) return entry;
+            return best;
+        });
+    },
+
+    getBestSeriesForExercise(exerciseId) {
+        const allEntries = this.workouts.flatMap(w => 
+            w.entries?.filter(e => e.exerciseId === exerciseId) || []
+        );
+        if (allEntries.length === 0) return [];
+        const bySeries = {};
+        allEntries.forEach(e => {
+            const sn = e.seriesNum || 1;
+            if (!bySeries[sn]) bySeries[sn] = [];
+            bySeries[sn].push(e);
+        });
+        const results = [];
+        Object.keys(bySeries).sort((a, b) => parseInt(a) - parseInt(b)).forEach(sn => {
+            const best = bySeries[sn].reduce((best, entry) => {
+                if (entry.weight > best.weight) return entry;
+                if (entry.weight === best.weight && entry.reps > best.reps) return entry;
+                return best;
+            });
+            results.push({ seriesNum: parseInt(sn), weight: best.weight, reps: best.reps });
+        });
+        return results;
+    },
+
+    renderReferenceContent(cat) {
+        const currentExId = this.currentWorkout?.currentExerciseId;
+        const currentEx = this.exercises.find(e => e.id === currentExId);
+        const bestSeries = currentExId ? this.getBestSeriesForExercise(currentExId) : [];
+
+        let html = '';
+
+        if (currentEx) {
+            html += `
+            <div class="mb-4 pb-4 border-b border-white/5">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fas fa-trophy text-warning text-[10px]"></i>
+                    <span class="text-xs font-bold text-text">Mejor: ${currentEx.name}</span>
+                </div>
+                ${bestSeries.length === 0 ? 
+                    '<p class="text-textMuted text-xs">Sin registros previos</p>' :
+                    `<div class="flex flex-wrap gap-2">
+                        ${bestSeries.map(s => `
+                            <div class="bg-warning/10 border border-warning/20 rounded-xl px-3 py-2 text-center min-w-[80px]">
+                                <div class="text-[10px] text-warning font-bold">Serie ${s.seriesNum}</div>
+                                <div class="text-sm text-text font-black">${s.weight} <span class="text-[10px] text-textMuted">kg</span></div>
+                                <div class="text-[10px] text-textMuted">${s.reps} reps</div>
+                            </div>
+                        `).join('')}
+                    </div>`
+                }
+            </div>`;
+        }
+
+        const lastWorkout = this.getLastWorkoutByCategory(this.currentWorkout.categoryId);
+        if (!lastWorkout) {
+            return html + '<p class="text-textMuted text-xs text-center py-4">Sin entrenamientos previos</p>';
+        }
+
+        const dateStr = new Date(lastWorkout.date).toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+        const filteredEntries = lastWorkout.entries?.filter(e => e.exerciseId === currentExId) || [];
+
+        if (filteredEntries.length === 0) {
+            return html + `<p class="text-textMuted text-xs">No hay datos de "${currentEx?.name}" en la última sesión</p>`;
+        }
+
+        const groups = this.groupEntriesByExercise(filteredEntries);
+        const totalVol = filteredEntries.reduce((s,e) => s + e.weight * e.reps, 0);
+
+        html += `
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-[10px] font-bold text-textMuted">${dateStr}</span>
+                <span class="text-[10px] text-textMuted ml-auto">${filteredEntries.length} series · ${totalVol.toLocaleString()} kg</span>
+            </div>
+            <div class="space-y-2">
+                ${groups.map(g => {
+                    const ex = this.exercises.find(e => e.id === g.exerciseId);
+                    return `
+                    <div class="bg-white/3 rounded-xl px-3 py-2.5">
+                        <div class="text-xs font-bold text-text mb-1.5">${ex?.name}</div>
+                        <div class="flex flex-wrap gap-1.5">
+                            ${g.entries.map(e => `
+                                <span class="text-[11px] bg-black/30 px-2.5 py-1 rounded-lg text-textSecondary font-semibold">${e.weight}kg × ${e.reps}${e.rir > 0 ? ' RIR'+e.rir : ''}</span>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        `;
+
+        return html;
+    },
+
+    calcRM(weight, reps) {
+        return weight * (1 + reps / 30);
+    },
+
+    renderHistory() {
+        const workouts = [...this.workouts].reverse();
+        const filterCat = document.getElementById('historyFilter')?.value || 'all';
+        let filtered = workouts;
+        if (filterCat !== 'all') filtered = filtered.filter(w => w.categoryId === filterCat);
+
+        document.getElementById('mainContent').innerHTML = `
+            <div class="space-y-5 pb-8 fade-up">
+                <div>
+                    <h2 class="text-2xl font-black text-text tracking-tight">Historial</h2>
+                    <p class="text-sm text-textSecondary mt-1">${this.workouts.length} sesiones</p>
+                </div>
+
+                <select id="historyFilter" onchange="app.renderHistory()" class="input-field w-full px-4 py-3 text-sm text-white font-bold appearance-none cursor-pointer">
+                    <option value="all">Todas las categorías</option>
+                    ${this.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                </select>
+
+                <div class="space-y-3">
+                    ${filtered.length === 0 ? 
+                        '<div class="text-center py-12"><i class="fas fa-clipboard-list text-white/10 text-4xl mb-3"></i><p class="text-textMuted text-sm font-medium">Sin entrenamientos</p></div>' :
+                        filtered.map(w => {
+                            const cat = this.categories.find(c => c.id === w.categoryId);
+                            const isRest = w.isRest || cat?.id === 'cat5';
+                            const date = new Date(w.date).toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+                            const totalVol = w.entries?.reduce((s, e) => s + e.weight * e.reps, 0) || 0;
+                            const exercisesCount = new Set(w.entries?.map(e => e.exerciseId)).size;
+
+                            if (isRest) {
+                                return `
+                                <div class="card p-4 flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: ${cat?.color}15">
+                                            <i class="fas ${cat?.icon}" style="color: ${cat?.color}"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-sm text-text">${cat?.name}</div>
+                                            <div class="text-xs text-textMuted">${date}</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-[10px] font-bold text-success bg-success/10 px-2.5 py-1 rounded-lg">Recuperación</span>
+                                        <button onclick="app.deleteWorkout('${w.id}')" class="touch text-danger/50 hover:text-danger w-8 h-8 flex items-center justify-center rounded-lg hover:bg-danger/10"><i class="fas fa-trash text-xs"></i></button>
+                                    </div>
+                                </div>`;
+                            }
+
+                            return `
+                            <div class="card p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: ${cat?.color}15">
+                                            <i class="fas ${cat?.icon}" style="color: ${cat?.color}"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-sm text-text">${cat?.name}</div>
+                                            <div class="text-xs text-textMuted">${date}</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-lg font-black" style="color: ${cat?.color}">${totalVol.toLocaleString()}</div>
+                                        <div class="text-[10px] text-textMuted font-bold">kg</div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3 text-xs mb-3">
+                                    <span class="text-textMuted font-semibold"><i class="fas fa-layer-group mr-1 text-primary/70"></i>${w.entries?.length || 0} series</span>
+                                    <span class="text-textMuted font-semibold"><i class="fas fa-dumbbell mr-1 text-warning/70"></i>${exercisesCount} ejercicios</span>
+                                </div>
+                                <div class="space-y-1.5">
+                                    ${this.groupEntriesByExercise(w.entries || []).map(g => {
+                                        const ex = this.exercises.find(e => e.id === g.exerciseId);
+                                        return `
+                                        <div class="bg-white/3 rounded-xl px-3 py-2">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <span class="text-xs font-bold text-text">${ex?.name}</span>
+                                            </div>
+                                            <div class="flex flex-wrap gap-1">
+                                                ${g.entries.map(e => `<span class="text-[10px] bg-black/30 px-2 py-0.5 rounded text-textSecondary font-semibold">${e.weight}kg×${e.reps}</span>`).join('')}
+                                            </div>
+                                        </div>`;
+                                    }).join('')}
+                                </div>
+                                <button onclick="app.deleteWorkout('${w.id}')" class="touch w-full mt-3 py-2.5 bg-danger/10 hover:bg-danger/15 text-danger rounded-xl text-xs font-bold transition-colors">
+                                    <i class="fas fa-trash mr-1"></i>Eliminar sesión
+                                </button>
+                            </div>`;
+                        }).join('')
+                    }
+                </div>
+            </div>
+        `;
+    },
+
+    deleteWorkout(id) {
+        if (!confirm('¿Eliminar esta sesión?')) return;
+        this.workouts = this.workouts.filter(w => w.id !== id);
+        this.showToast('Sesión eliminada');
+        this.renderHistory();
+    },
+
+    renderProgress() {
+        document.getElementById('mainContent').innerHTML = `
+            <div class="space-y-5 pb-8 fade-up">
+                <div>
+                    <h2 class="text-2xl font-black text-text tracking-tight">Progreso</h2>
+                    <p class="text-sm text-textSecondary mt-1">Tu evolución en gráficas</p>
+                </div>
+
+                <select id="progressExercise" onchange="app.renderProgressCharts()" class="input-field w-full px-4 py-3 text-sm text-white font-bold appearance-none cursor-pointer">
+                    <option value="all">Todos los ejercicios</option>
+                    ${this.exercises.map(e => `<option value="${e.id}">${e.name}</option>`).join('')}
+                </select>
+
+                <div class="card p-4">
+                    <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider mb-3">Peso levantado</h3>
+                    <div class="chart-box">
+                        <canvas id="chartWeight"></canvas>
+                    </div>
+                </div>
+
+                <div class="card p-4">
+                    <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider mb-3">RM estimado</h3>
+                    <div class="chart-box">
+                        <canvas id="chartRM"></canvas>
+                    </div>
+                </div>
+
+                <div class="card p-4">
+                    <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider mb-3">Volumen por serie</h3>
+                    <div class="chart-box">
+                        <canvas id="chartVolume"></canvas>
+                    </div>
+                </div>
+
+                <div class="card p-4">
+                    <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider mb-4">Mejores RM</h3>
+                    <div class="space-y-2">
+                        ${this.exercises.map(e => {
+                            const allEntries = this.workouts.flatMap(w => w.entries?.filter(en => en.exerciseId === e.id) || []);
+                            const bestRM = allEntries.length ? Math.max(...allEntries.map(en => this.calcRM(en.weight, en.reps))) : 0;
+                            const bestEntry = allEntries.find(en => this.calcRM(en.weight, en.reps) === bestRM);
+                            return bestRM > 0 ? `
+                            <div class="bg-white/3 rounded-xl px-4 py-3 flex items-center justify-between">
+                                <div>
+                                    <div class="text-sm font-bold text-text">${e.name}</div>
+                                    <div class="text-[11px] text-textMuted font-medium">${bestEntry?.weight}kg × ${bestEntry?.reps}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-lg font-black text-purple-400">${bestRM.toFixed(1)}</div>
+                                    <div class="text-[10px] text-textMuted font-bold">kg</div>
+                                </div>
+                            </div>` : '';
+                        }).filter(Boolean).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        setTimeout(() => this.renderProgressCharts(), 100);
+    },
+
+    renderProgressCharts() {
+        const exerciseId = document.getElementById('progressExercise')?.value || 'all';
+        const allEntries = [];
+        this.workouts.forEach(w => {
+            w.entries?.forEach(e => {
+                if (exerciseId === 'all' || e.exerciseId === exerciseId) {
+                    allEntries.push({
+                        date: new Date(w.date),
+                        weight: e.weight,
+                        reps: e.reps,
+                        rm: this.calcRM(e.weight, e.reps),
+                        volume: e.weight * e.reps,
+                        exercise: this.exercises.find(ex => ex.id === e.exerciseId)?.name || 'Desconocido'
+                    });
+                }
+            });
+        });
+        allEntries.sort((a, b) => a.date - b.date);
+        const totalPoints = allEntries.length;
+        const skip = totalPoints > 20 ? Math.ceil(totalPoints / 10) : (totalPoints > 10 ? 2 : 1);
+        const labels = allEntries.map((e, i) => i % skip === 0 ? `${e.date.getDate()}/${e.date.getMonth()+1}` : '');
+
+        const createChart = (canvasId, data, label, color) => {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (ctx.chart) ctx.chart.destroy();
+            const container = ctx.parentElement;
+            if (container) container.style.height = '200px';
+
+            ctx.chart = new Chart(ctx, {
+                type: 'line',
+                data: { 
+                    labels, 
+                    datasets: [{ 
+                        label, 
+                        data, 
+                        borderColor: color, 
+                        backgroundColor: color + '12', 
+                        fill: true, 
+                        tension: 0.3, 
+                        pointRadius: totalPoints > 30 ? 2 : 3, 
+                        pointHoverRadius: 5, 
+                        pointBackgroundColor: color, 
+                        borderWidth: 2 
+                    }] 
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#f9fafb',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 10,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(context) {
+                                    const idx = context[0].dataIndex;
+                                    const entry = allEntries[idx];
+                                    return entry ? `${entry.exercise} — ${entry.date.toLocaleDateString('es-ES')}` : '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            ticks: { 
+                                color: '#6b7280', 
+                                font: { size: 9, weight: '600' },
+                                maxRotation: 0,
+                                autoSkip: false,
+                                callback: function(val, index) { return labels[index] || ''; }
+                            }, 
+                            grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false } 
+                        },
+                        y: { 
+                            ticks: { 
+                                color: '#6b7280', 
+                                font: { size: 9, weight: '600' },
+                                padding: 8
+                            }, 
+                            grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false } 
+                        }
+                    },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+        };
+
+        if (allEntries.length === 0) {
+            ['chartWeight', 'chartRM', 'chartVolume'].forEach(id => {
+                const ctx = document.getElementById(id);
+                if (ctx) {
+                    const container = ctx.parentElement;
+                    if (container) {
+                        container.style.height = '100px';
+                        container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-textMuted"><i class="fas fa-chart-line text-2xl mb-2 opacity-20"></i><span class="text-xs font-medium">Sin datos</span></div>';
+                    }
+                }
+            });
+            return;
+        }
+
+        createChart('chartWeight', allEntries.map(e => e.weight), 'Peso (kg)', '#3b82f6');
+        createChart('chartRM', allEntries.map(e => e.rm), 'RM (kg)', '#a855f7');
+        createChart('chartVolume', allEntries.map(e => e.volume), 'Volumen (kg)', '#f59e0b');
+    },
+
+    renderSettings() {
+        document.getElementById('mainContent').innerHTML = `
+            <div class="space-y-5 pb-8 fade-up">
+                <div>
+                    <h2 class="text-2xl font-black text-text tracking-tight">Configuración</h2>
+                    <p class="text-sm text-textSecondary mt-1">Personaliza tu tracker</p>
+                </div>
+
+                <div class="flex bg-white/5 rounded-2xl p-1.5">
+                    <button onclick="app.showSettingsTab('categories')" id="tab-categories" class="flex-1 py-2.5 rounded-xl text-sm font-bold transition bg-primary text-white shadow-lg shadow-primary/20">Categorías</button>
+                    <button onclick="app.showSettingsTab('exercises')" id="tab-exercises" class="flex-1 py-2.5 rounded-xl text-sm font-bold transition text-textMuted hover:text-text">Ejercicios</button>
+                    <button onclick="app.showSettingsTab('data')" id="tab-data" class="flex-1 py-2.5 rounded-xl text-sm font-bold transition text-textMuted hover:text-text">Datos</button>
+                </div>
+                <div id="settingsContent">${this.renderCategoriesTab()}</div>
+            </div>
+        `;
+    },
+
+    showSettingsTab(tab) {
+        const activeClass = 'flex-1 py-2.5 rounded-xl text-sm font-bold transition bg-primary text-white shadow-lg shadow-primary/20';
+        const inactiveClass = 'flex-1 py-2.5 rounded-xl text-sm font-bold transition text-textMuted hover:text-text';
+        document.getElementById('tab-categories').className = tab === 'categories' ? activeClass : inactiveClass;
+        document.getElementById('tab-exercises').className = tab === 'exercises' ? activeClass : inactiveClass;
+        document.getElementById('tab-data').className = tab === 'data' ? activeClass : inactiveClass;
+
+        const content = document.getElementById('settingsContent');
+        if (tab === 'categories') content.innerHTML = this.renderCategoriesTab();
+        else if (tab === 'exercises') content.innerHTML = this.renderExercisesTab();
+        else content.innerHTML = this.renderDataTab();
+    },
+
+    renderCategoriesTab() {
+        return `
+            <div class="space-y-2">
+                ${this.categories.map(cat => `
+                    <div class="card p-4 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background: ${cat.color}15">
+                            <i class="fas ${cat.icon}" style="color: ${cat.color}"></i>
+                        </div>
+                        <input type="text" value="${cat.name}" onchange="app.updateCategory('${cat.id}', 'name', this.value)" class="flex-1 bg-transparent text-white font-bold text-sm focus:outline-none border-b border-transparent focus:border-primary pb-1 transition-colors">
+                        ${cat.id !== 'cat5' ? `<button onclick="app.deleteCategory('${cat.id}')" class="touch text-danger/40 hover:text-danger w-8 h-8 flex items-center justify-center rounded-lg hover:bg-danger/10"><i class="fas fa-trash text-xs"></i></button>` : ''}
+                    </div>
+                `).join('')}
+                <button onclick="app.addCategory()" class="touch w-full py-3.5 border-2 border-dashed border-white/10 rounded-2xl text-textMuted hover:border-primary/40 hover:text-primary transition-all font-bold text-sm flex items-center justify-center gap-2">
+                    <i class="fas fa-plus"></i>Agregar categoría
+                </button>
+            </div>
+        `;
+    },
+
+    renderExercisesTab() {
+        return `
+            <div class="space-y-3">
+                <select id="exFilterCat" onchange="app.renderExercisesList()" class="input-field w-full px-4 py-3 text-sm text-white font-bold appearance-none cursor-pointer">
+                    <option value="all">Todas las categorías</option>
+                    ${this.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                </select>
+                <div id="exercisesList" class="space-y-2">${this.renderExercisesList()}</div>
+                <button onclick="app.showAddExerciseModal()" class="touch btn-primary w-full py-3.5 text-sm">
+                    <i class="fas fa-plus mr-2"></i>Agregar ejercicio
+                </button>
+            </div>
+        `;
+    },
+
+    renderExercisesList() {
+        const filterCat = document.getElementById('exFilterCat')?.value || 'all';
+        let exs = this.exercises;
+        if (filterCat !== 'all') exs = exs.filter(e => e.categoryIds && e.categoryIds.includes(filterCat));
+
+        return exs.map(e => `
+            <div class="card p-4">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="font-bold text-sm text-text">${e.name}</span>
+                    <div class="flex gap-1">${this.getCategoryBadges(e.id)}</div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-textMuted font-medium">${e.type} · ${e.muscleGroup}</span>
+                    <button onclick="app.deleteExercise('${e.id}')" class="touch text-danger/40 hover:text-danger text-xs font-bold px-2 py-1 rounded-lg hover:bg-danger/10 transition-colors">Eliminar</button>
+                </div>
+            </div>
+        `).join('') || '<div class="text-center py-8"><p class="text-textMuted text-sm font-medium">Sin ejercicios</p></div>';
+    },
+
+    renderDataTab() {
+        const totalSeries = this.workouts.reduce((s, w) => s + (w.entries?.length || 0), 0);
+        return `
+            <div class="space-y-4">
+                <div class="card p-5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <i class="fas fa-file-excel text-primary text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-text">Exportar datos</div>
+                            <div class="text-xs text-textMuted">Descarga en formato Excel (CSV)</div>
+                        </div>
+                    </div>
+                    <button onclick="app.exportToCSV()" class="touch btn-primary w-full py-3 text-sm">
+                        <i class="fas fa-download mr-2"></i>Descargar CSV
+                    </button>
+                </div>
+
+                <div class="card p-5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                            <i class="fas fa-calculator text-cyan-400 text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-text">Calculadora RM</div>
+                            <div class="text-xs text-textMuted">7 fórmulas de estimación</div>
+                        </div>
+                    </div>
+                    <button onclick="app.showView('rmcalc')" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">
+                        Abrir calculadora
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="card p-3 text-center">
+                        <div class="text-xl font-black text-text">${this.workouts.length}</div>
+                        <div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mt-1">Sesiones</div>
+                    </div>
+                    <div class="card p-3 text-center">
+                        <div class="text-xl font-black text-text">${totalSeries}</div>
+                        <div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mt-1">Series</div>
+                    </div>
+                    <div class="card p-3 text-center">
+                        <div class="text-xl font-black text-text">${this.exercises.length}</div>
+                        <div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mt-1">Ejercicios</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    addCategory() {
+        const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
+        const icons = ['fa-dumbbell', 'fa-hand-fist', 'fa-person-running', 'fa-spa', 'fa-fire', 'fa-bolt'];
+        const newCat = {
+            id: 'cat' + Date.now(),
+            name: 'Nueva categoría',
+            color: colors[Math.floor(Math.random() * colors.length)],
+            icon: icons[Math.floor(Math.random() * icons.length)]
+        };
+        this.categories = [...this.categories, newCat];
+        this.showSettingsTab('categories');
+        this.showToast('Categoría agregada');
+    },
+
+    updateCategory(id, field, value) {
+        this.categories = this.categories.map(c => c.id === id ? { ...c, [field]: value } : c);
+    },
+
+    deleteCategory(id) {
+        if (!confirm('¿Eliminar esta categoría?')) return;
+        this.categories = this.categories.filter(c => c.id !== id);
+        this.exercises = this.exercises.map(e => ({
+            ...e,
+            categoryIds: (e.categoryIds || []).filter(cid => cid !== id)
+        }));
+        this.showSettingsTab('categories');
+        this.showToast('Categoría eliminada');
+    },
+
+    showAddExerciseModal() {
+        const modal = document.getElementById('modalContent');
+        modal.innerHTML = `
+            <h3 class="text-xl font-black text-text mb-5 tracking-tight">Nuevo ejercicio</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Nombre</label>
+                    <input type="text" id="newExName" class="input-field w-full px-4 py-3 text-white font-bold text-sm" placeholder="Ej: Press de Banca">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Categorías</label>
+                    <div class="space-y-2">
+                        ${this.categories.filter(c => c.id !== 'cat5').map(c => `
+                            <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white/5 transition-colors">
+                                <input type="checkbox" name="newExCats" value="${c.id}" class="w-5 h-5 rounded-lg border-white/10 text-primary focus:ring-primary bg-black/30">
+                                <span class="text-sm text-text font-semibold">${c.name}</span>
+                                <span class="w-3 h-3 rounded-full ml-auto" style="background: ${c.color}"></span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Grupo</label>
+                        <select id="newExMuscle" class="input-field w-full px-4 py-3 text-white font-semibold text-sm appearance-none cursor-pointer">
+                            <option>Pecho</option><option>Hombro</option><option>Espalda</option><option>Piernas</option>
+                            <option>Bíceps</option><option>Tríceps</option><option>Abdomen</option><option>Glúteos</option>
+                            <option>Isquiotibiales</option><option>Hombro Posterior</option><option>Trapecio</option><option>Pantorrilla</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Tipo</label>
+                        <select id="newExType" class="input-field w-full px-4 py-3 text-white font-semibold text-sm appearance-none cursor-pointer">
+                            <option>Compuesto</option><option>Aislado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-2">
+                    <button onclick="app.closeModal()" class="touch flex-1 py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">Cancelar</button>
+                    <button onclick="app.saveNewExercise()" class="touch flex-1 btn-primary py-3 text-sm">Guardar</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('modalOverlay').classList.remove('hidden');
+    },
+
+    saveNewExercise() {
+        const name = document.getElementById('newExName').value.trim();
+        if (!name) { this.showToast('Ingresa un nombre', 'error'); return; }
+        const checkedCats = Array.from(document.querySelectorAll('input[name="newExCats"]:checked')).map(cb => cb.value);
+        if (checkedCats.length === 0) {
+            this.showToast('Selecciona una categoría', 'error');
+            return;
+        }
+        const newEx = {
+            id: 'e' + Date.now(),
+            name,
+            categoryIds: checkedCats,
+            muscleGroup: document.getElementById('newExMuscle').value,
+            type: document.getElementById('newExType').value,
+            notes: ''
+        };
+        this.exercises = [...this.exercises, newEx];
+        this.closeModal();
+        this.showSettingsTab('exercises');
+        this.showToast('Ejercicio agregado');
+    },
+
+    deleteExercise(id) {
+        if (!confirm('¿Eliminar este ejercicio?')) return;
+        this.exercises = this.exercises.filter(e => e.id !== id);
+        this.showSettingsTab('exercises');
+        this.showToast('Ejercicio eliminado');
+    },
+
+    exportToCSV() {
+        const workouts = this.workouts;
+        if (workouts.length === 0) {
+            this.showToast('No hay datos para exportar', 'error');
+            return;
+        }
+        const headers = ['Fecha', 'Categoria', 'Tipo_Dia', 'Ejercicio', 'Grupo_Muscular', 'Tipo_Ejercicio', 'Serie', 'Peso_kg', 'Reps', 'RIR', 'Volumen_Serie', 'RM_Estimado'];
+        const rows = [];
+        workouts.forEach(w => {
+            const cat = this.categories.find(c => c.id === w.categoryId);
+            const date = new Date(w.date).toLocaleDateString('es-ES');
+            const isRest = w.isRest || cat?.id === 'cat5';
+            if (isRest) {
+                rows.push([date, cat?.name || 'Descanso', 'Descanso', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+                return;
+            }
+            w.entries?.forEach(e => {
+                const ex = this.exercises.find(exe => exe.id === e.exerciseId);
+                rows.push([
+                    date, cat?.name || '-', 'Entrenamiento', ex?.name || '-', ex?.muscleGroup || '', ex?.type || '',
+                    e.seriesNum || 1, e.weight, e.reps, e.rir || 0, e.weight * e.reps, this.calcRM(e.weight, e.reps).toFixed(2)
+                ]);
+            });
+        });
+        rows.sort((a, b) => new Date(b[0].split('/').reverse().join('-')) - new Date(a[0].split('/').reverse().join('-')));
+        const csvContent = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `tracker_fuerza_${new Date().toISOString().split('T')[0]}.csv`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast('CSV descargado 📊');
+    },
+
+    renderRMCalculator() {
+        document.getElementById('mainContent').innerHTML = `
+            <div class="space-y-5 pb-8 fade-up">
+                <div>
+                    <h2 class="text-2xl font-black text-text tracking-tight">Calculadora RM</h2>
+                    <p class="text-sm text-textSecondary mt-1">Estima tu repetición máxima</p>
+                </div>
+
+                <div class="card p-5">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Peso kg</label>
+                            <input type="number" id="rmWeight" value="100" oninput="app.calculateRM()" class="input-field w-full h-14 text-center text-white font-black text-2xl">
+                        </div>
+                        <div class="input-group">
+                            <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Reps</label>
+                            <input type="number" id="rmReps" value="5" oninput="app.calculateRM()" class="input-field w-full h-14 text-center text-white font-black text-2xl">
+                        </div>
+                    </div>
+                    <button onclick="app.fillFromLastWorkout()" class="touch text-primary text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors w-full justify-center">
+                        <i class="fas fa-history"></i>Usar última serie
+                    </button>
+                </div>
+
+                <div class="card p-5 text-center">
+                    <div class="text-[10px] font-bold text-textMuted uppercase tracking-widest mb-2">Promedio estimado</div>
+                    <div id="rmAverage" class="text-5xl font-black text-primary tracking-tight">--</div>
+                    <div class="text-xs text-textMuted font-semibold mt-1">kg</div>
+                </div>
+
+                <div class="card p-5">
+                    <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider mb-3">Por fórmula</h3>
+                    <div id="rmResults" class="space-y-2"></div>
+                </div>
+
+                <div class="card p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider">% del 1RM</h3>
+                        <select id="rmFormulaSelect" onchange="app.calculateRM()" class="input-field px-3 py-1.5 text-xs text-white font-bold appearance-none cursor-pointer">
+                            <option value="avg">Promedio</option>
+                            <option value="Epley">Epley</option>
+                            <option value="Brzycki">Brzycki</option>
+                            <option value="Lombardi">Lombardi</option>
+                            <option value="O'Conner">O'Conner</option>
+                            <option value="Lander">Lander</option>
+                            <option value="Mayhew">Mayhew</option>
+                            <option value="Wathan">Wathan</option>
+                        </select>
+                    </div>
+                    <div id="rmPercentTable" class="grid grid-cols-5 gap-2 text-center"></div>
+                </div>
+
+                <div class="card p-5">
+                    <h3 class="text-xs font-bold text-textSecondary uppercase tracking-wider mb-3">Guía de fórmulas</h3>
+                    <div class="space-y-2.5 text-xs text-textMuted font-medium">
+                        <p><strong class="text-text">Brzycki:</strong> Más precisa 1-10 reps. Estándar powerlifting.</p>
+                        <p><strong class="text-text">Epley:</strong> Similar a Brzycki, optimista en reps altas.</p>
+                        <p><strong class="text-text">Lombardi:</strong> Ideal para rangos altos (8-15 reps).</p>
+                        <p><strong class="text-text">Lander:</strong> Alternativa para rangos medios.</p>
+                        <p><strong class="text-text">O'Conner:</strong> Conservadora, para principiantes.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        setTimeout(() => this.calculateRM(), 50);
+    },
+
+    calculateRM() {
+        const weight = parseFloat(document.getElementById('rmWeight')?.value) || 0;
+        const reps = parseFloat(document.getElementById('rmReps')?.value) || 0;
+
+        if (weight <= 0 || reps <= 0) {
+            document.getElementById('rmResults').innerHTML = '<p class="text-textMuted text-sm text-center py-4">Ingresa valores válidos</p>';
+            document.getElementById('rmAverage').textContent = '--';
+            return;
+        }
+
+        const formulas = [
+            { name: 'Epley', color: '#ef4444', fn: (w, r) => w * (1 + r / 30) },
+            { name: 'Brzycki', color: '#06b6d4', fn: (w, r) => w * (36 / (37 - r)) },
+            { name: 'Lombardi', color: '#3b82f6', fn: (w, r) => w * Math.pow(r, 0.10) },
+            { name: "O'Conner", color: '#22c55e', fn: (w, r) => w * (1 + 0.025 * r) },
+            { name: 'Lander', color: '#f59e0b', fn: (w, r) => (100 * w) / (101.3 - 2.67123 * r) },
+            { name: 'Mayhew', color: '#a855f7', fn: (w, r) => (100 * w) / (52.2 + (41.9 * Math.exp(-0.055 * r))) },
+            { name: 'Wathan', color: '#f43f5e', fn: (w, r) => (100 * w) / (48.8 + (53.8 * Math.exp(-0.075 * r))) }
+        ];
+
+        let results = [];
+        let total = 0, count = 0;
+
+        formulas.forEach(f => {
+            let rm = f.fn(weight, reps);
+            if (!isFinite(rm) || isNaN(rm)) rm = 0;
+            if (reps > 10 && rm > weight * 3) rm = 0;
+            results.push({ name: f.name, color: f.color, rm });
+            if (rm > 0) { total += rm; count++; }
+        });
+
+        const avg = count > 0 ? total / count : 0;
+
+        document.getElementById('rmResults').innerHTML = results.map(r => {
+            const diff = r.rm - avg;
+            const diffStr = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
+            const diffColor = diff > 0 ? 'text-success' : (diff < 0 ? 'text-danger' : 'text-textMuted');
+            return `
+                <div class="flex items-center justify-between bg-white/3 rounded-xl px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2.5 h-2.5 rounded-full" style="background: ${r.color}"></div>
+                        <span class="text-sm font-bold text-text">${r.name}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-sm font-black text-text">${r.rm.toFixed(1)} <span class="text-[10px] text-textMuted">kg</span></span>
+                        <span class="text-xs ${diffColor} font-bold ml-2">${diffStr}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        document.getElementById('rmAverage').textContent = avg > 0 ? avg.toFixed(1) : '--';
+
+        const selectedFormula = document.getElementById('rmFormulaSelect')?.value || 'avg';
+        let baseRM = avg;
+        if (selectedFormula !== 'avg') {
+            const selected = results.find(r => r.name === selectedFormula);
+            if (selected && selected.rm > 0) baseRM = selected.rm;
+        }
+
+        const pctTable = document.getElementById('rmPercentTable');
+        if (pctTable && baseRM > 0) {
+            const percentages = [
+                { pct: 100, reps: 1 }, { pct: 97, reps: 2 }, { pct: 94, reps: 3 },
+                { pct: 92, reps: 4 }, { pct: 89, reps: 5 }, { pct: 86, reps: 6 },
+                { pct: 83, reps: 7 }, { pct: 81, reps: 8 }, { pct: 78, reps: 9 },
+                { pct: 75, reps: 10 }, { pct: 71, reps: 12 }, { pct: 67, reps: 15 }
+            ];
+            pctTable.innerHTML = percentages.map(p => {
+                const w = (baseRM * p.pct / 100).toFixed(1);
+                return `
+                    <div class="bg-white/3 rounded-xl p-2">
+                        <div class="text-warning font-black text-sm">${p.pct}%</div>
+                        <div class="text-text font-bold text-sm">${w}</div>
+                        <div class="text-textMuted text-[10px] font-semibold">${p.reps}r</div>
+                    </div>
+                `;
+            }).join('');
+        }
+    },
+
+    fillFromLastWorkout() {
+        const workouts = this.workouts;
+        if (workouts.length === 0) { this.showToast('Sin entrenamientos previos', 'error'); return; }
+        const lastEntry = workouts[workouts.length - 1].entries?.slice(-1)[0];
+        if (!lastEntry) { this.showToast('Sin series registradas', 'error'); return; }
+        document.getElementById('rmWeight').value = lastEntry.weight;
+        document.getElementById('rmReps').value = lastEntry.reps;
+        this.calculateRM();
+        this.showToast('Datos cargados');
+    },
+
+    closeModal() {
+        document.getElementById('modalOverlay').classList.add('hidden');
+    },
+
+    showToast(msg, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+        const icon = type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle';
+        toast.className = `fixed top-24 left-1/2 -translate-x-1/2 z-[70] px-5 py-3 rounded-2xl shadow-2xl font-bold text-sm hidden flex items-center gap-2.5 toast-enter ${type === 'error' ? 'bg-danger' : 'bg-success'} text-white`;
+        toast.innerHTML = `<i class="fas ${icon} text-lg"></i><span id="toastMsg">${msg}</span>`;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 2500);
+    },
+
+    newWorkout() {
+        this.currentWorkout = null;
+        this.showView('workout');
+    }
+};
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'modalOverlay') app.closeModal();
+});
+
+app.init();
+</script>
+</body>
+</html>
