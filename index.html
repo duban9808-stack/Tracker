@@ -305,7 +305,11 @@ const Storage = {
             Storage.set('exercises', migrated);
         }
         if (!Storage.get('workouts')) Storage.set('workouts', []);
-    }
+    },
+
+    getCurrentWorkout() { return Storage.get('currentWorkout'); },
+    setCurrentWorkout(val) { Storage.set('currentWorkout', val); },
+    clearCurrentWorkout() { localStorage.removeItem('currentWorkout'); }
 };
 
 const app = {
@@ -314,6 +318,11 @@ const app = {
 
     init() {
         Storage.init();
+        // Restaurar entrenamiento en progreso si existe
+        const saved = Storage.getCurrentWorkout();
+        if (saved && saved.entries) {
+            this.currentWorkout = saved;
+        }
         this.showView('dashboard');
     },
 
@@ -369,6 +378,29 @@ const app = {
 
         document.getElementById('mainContent').innerHTML = `
             <div class="space-y-6 pb-8">
+
+                <!-- Entrenamiento en progreso -->
+                ${this.currentWorkout ? (() => {
+                    const cw = this.currentWorkout;
+                    const cwCat = this.categories.find(c => c.id === cw.categoryId);
+                    const cwEntries = cw.entries?.length || 0;
+                    const cwVol = cw.entries?.reduce((s, e) => s + e.weight * e.reps, 0) || 0;
+                    return `
+                    <div class="card p-4 border-l-4 border-primary fade-up" style="border-left-color: ${cwCat?.color || '#3b82f6'}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: ${cwCat?.color}15">
+                                    <i class="fas ${cwCat?.icon || 'fa-dumbbell'}" style="color: ${cwCat?.color}"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-text">Entrenamiento en progreso</div>
+                                    <div class="text-xs text-textMuted">${cwCat?.name} · ${cwEntries} series · ${cwVol.toLocaleString()} kg</div>
+                                </div>
+                            </div>
+                            <button onclick="app.showView('workout')" class="touch btn-primary px-4 py-2 text-xs">Continuar</button>
+                        </div>
+                    </div>`;
+                })() : ''}
 
                 <!-- Hero: Último entrenamiento -->
                 <div class="fade-up">
@@ -736,12 +768,14 @@ const app = {
             entries: [],
             isRest: isRest
         };
+        Storage.setCurrentWorkout(this.currentWorkout);
         this.showView('workout');
     },
 
     changeExercise(exerciseId) {
         if (this.currentWorkout) {
             this.currentWorkout.currentExerciseId = exerciseId;
+            Storage.setCurrentWorkout(this.currentWorkout);
             this.renderWorkout();
         }
     },
@@ -769,6 +803,7 @@ const app = {
             seriesNum: seriesCount + 1,
             weight, reps, rir, notes: ''
         });
+        Storage.setCurrentWorkout(this.currentWorkout);
         document.getElementById('inputWeight').value = '';
         document.getElementById('inputReps').value = '';
         document.getElementById('inputWeight').focus();
@@ -787,6 +822,7 @@ const app = {
             });
         });
         this.currentWorkout.entries = newEntries;
+        Storage.setCurrentWorkout(this.currentWorkout);
         this.renderWorkout();
     },
 
@@ -1734,6 +1770,10 @@ const app = {
     },
 
     newWorkout() {
+        if (this.currentWorkout && this.currentWorkout.entries.length > 0) {
+            if (!confirm('Tienes un entrenamiento en progreso. ¿Descartarlo y empezar uno nuevo?')) return;
+        }
+        Storage.clearCurrentWorkout();
         this.currentWorkout = null;
         this.showView('workout');
     }
