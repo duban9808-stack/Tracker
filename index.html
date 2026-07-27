@@ -1276,7 +1276,10 @@ const app = {
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="text-[11px] text-textMuted font-medium">${e.type} · ${e.muscleGroup}</span>
-                    <button onclick="app.deleteExercise('${e.id}')" class="touch text-danger/40 hover:text-danger text-xs font-bold px-2 py-1 rounded-lg hover:bg-danger/10 transition-colors">Eliminar</button>
+                    <div class="flex gap-2">
+                        <button onclick="app.showEditExerciseModal('${e.id}')" class="touch text-primary/60 hover:text-primary text-xs font-bold px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors">Editar</button>
+                        <button onclick="app.deleteExercise('${e.id}')" class="touch text-danger/40 hover:text-danger text-xs font-bold px-2 py-1 rounded-lg hover:bg-danger/10 transition-colors">Eliminar</button>
+                    </div>
                 </div>
             </div>
         `).join('') || '<div class="text-center py-8"><p class="text-textMuted text-sm font-medium">Sin ejercicios</p></div>';
@@ -1429,6 +1432,87 @@ const app = {
         this.closeModal();
         this.showSettingsTab('exercises');
         this.showToast('Ejercicio agregado');
+    },
+
+    showEditExerciseModal(exerciseId) {
+        const ex = this.exercises.find(e => e.id === exerciseId);
+        if (!ex) return;
+        const modal = document.getElementById('modalContent');
+        modal.innerHTML = `
+            <h3 class="text-xl font-black text-text mb-5 tracking-tight">Editar ejercicio</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Nombre</label>
+                    <input type="text" id="editExName" value="${ex.name}" class="input-field w-full px-4 py-3 text-white font-bold text-sm">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Categorías</label>
+                    <div class="space-y-2">
+                        ${this.categories.filter(c => c.id !== 'cat5').map(c => `
+                            <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white/5 transition-colors">
+                                <input type="checkbox" name="editExCats" value="${c.id}" ${ex.categoryIds?.includes(c.id) ? 'checked' : ''} class="w-5 h-5 rounded-lg border-white/10 text-primary focus:ring-primary bg-black/30">
+                                <span class="text-sm text-text font-semibold">${c.name}</span>
+                                <span class="w-3 h-3 rounded-full ml-auto" style="background: ${c.color}"></span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Grupo</label>
+                        <select id="editExMuscle" class="input-field w-full px-4 py-3 text-white font-semibold text-sm appearance-none cursor-pointer">
+                            <option ${ex.muscleGroup === 'Pecho' ? 'selected' : ''}>Pecho</option>
+                            <option ${ex.muscleGroup === 'Hombro' ? 'selected' : ''}>Hombro</option>
+                            <option ${ex.muscleGroup === 'Espalda' ? 'selected' : ''}>Espalda</option>
+                            <option ${ex.muscleGroup === 'Piernas' ? 'selected' : ''}>Piernas</option>
+                            <option ${ex.muscleGroup === 'Bíceps' ? 'selected' : ''}>Bíceps</option>
+                            <option ${ex.muscleGroup === 'Tríceps' ? 'selected' : ''}>Tríceps</option>
+                            <option ${ex.muscleGroup === 'Abdomen' ? 'selected' : ''}>Abdomen</option>
+                            <option ${ex.muscleGroup === 'Glúteos' ? 'selected' : ''}>Glúteos</option>
+                            <option ${ex.muscleGroup === 'Isquiotibiales' ? 'selected' : ''}>Isquiotibiales</option>
+                            <option ${ex.muscleGroup === 'Hombro Posterior' ? 'selected' : ''}>Hombro Posterior</option>
+                            <option ${ex.muscleGroup === 'Trapecio' ? 'selected' : ''}>Trapecio</option>
+                            <option ${ex.muscleGroup === 'Pantorrilla' ? 'selected' : ''}>Pantorrilla</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Tipo</label>
+                        <select id="editExType" class="input-field w-full px-4 py-3 text-white font-semibold text-sm appearance-none cursor-pointer">
+                            <option ${ex.type === 'Compuesto' ? 'selected' : ''}>Compuesto</option>
+                            <option ${ex.type === 'Aislado' ? 'selected' : ''}>Aislado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-2">
+                    <button onclick="app.closeModal()" class="touch flex-1 py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">Cancelar</button>
+                    <button onclick="app.saveEditExercise('${exerciseId}')" class="touch flex-1 btn-primary py-3 text-sm">Guardar cambios</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('modalOverlay').classList.remove('hidden');
+    },
+
+    saveEditExercise(exerciseId) {
+        const name = document.getElementById('editExName').value.trim();
+        if (!name) { this.showToast('Ingresa un nombre', 'error'); return; }
+        const checkedCats = Array.from(document.querySelectorAll('input[name="editExCats"]:checked')).map(cb => cb.value);
+        if (checkedCats.length === 0) {
+            this.showToast('Selecciona al menos una categoría', 'error');
+            return;
+        }
+        this.exercises = this.exercises.map(e => {
+            if (e.id !== exerciseId) return e;
+            return {
+                ...e,
+                name,
+                categoryIds: checkedCats,
+                muscleGroup: document.getElementById('editExMuscle').value,
+                type: document.getElementById('editExType').value
+            };
+        });
+        this.closeModal();
+        this.showSettingsTab('exercises');
+        this.showToast('Ejercicio actualizado');
     },
 
     deleteExercise(id) {
