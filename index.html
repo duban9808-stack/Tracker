@@ -185,7 +185,6 @@
     </style>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<base target="_blank">
 </head>
 <body class="min-h-screen pb-28">
 
@@ -206,6 +205,43 @@
 
     <!-- Main -->
     <main id="mainContent" class="pt-20 px-5 max-w-lg mx-auto"></main>
+
+    <!-- Bottom Bars (referencia + cronómetro, arriba del nav) -->
+    <div id="bottomBars" class="fixed bottom-[72px] left-0 right-0 z-50 hidden">
+        <!-- Reference Bar -->
+        <div class="nav-glass border-t border-white/5">
+            <div class="max-w-lg mx-auto px-5 py-2.5 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-book-open text-primary text-xs"></i>
+                </div>
+                <div class="flex-1 min-w-0" id="refPanel">
+                    <!-- Contenido inyectado por renderWorkout() -->
+                </div>
+            </div>
+        </div>
+        <!-- Rest Timer Bar -->
+        <div class="nav-glass border-t border-white/5">
+            <div class="max-w-lg mx-auto px-5 py-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                        <i class="fas fa-stopwatch text-primary text-xs"></i>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-bold text-textMuted uppercase tracking-wider leading-none">Descanso</div>
+                        <div id="restTimerDisplay" class="text-xl font-black tabular-nums leading-tight mt-0.5" style="color: #22c55e; font-variant-numeric: tabular-nums;">00:00</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="app.toggleRestTimer()" id="restTimerToggle" class="touch w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-textMuted hover:text-text transition-colors">
+                        <i class="fas fa-play text-[10px]" id="restTimerIcon"></i>
+                    </button>
+                    <button onclick="app.resetRestTimer()" class="touch w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-textMuted hover:text-text transition-colors">
+                        <i class="fas fa-rotate-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Bottom Nav -->
     <nav class="fixed bottom-0 left-0 right-0 z-50 nav-glass border-t border-white/5">
@@ -361,6 +397,8 @@ const BogotaTime = {
 const app = {
     currentView: 'dashboard',
     currentWorkout: null,
+    restTimer: { startTime: null, elapsed: 0, intervalId: null, running: false },
+    refView: 'last', // 'best' | 'last'
 
     init() {
         Storage.init();
@@ -371,6 +409,77 @@ const app = {
         }
         this.showView('dashboard');
     },
+
+    // ========== CRONÓMETRO DE DESCANSO ==========
+    startRestTimer() {
+        this.stopRestTimer();
+        this.restTimer.startTime = Date.now() - this.restTimer.elapsed;
+        this.restTimer.running = true;
+        this.restTimer.intervalId = setInterval(() => {
+            this.restTimer.elapsed = Date.now() - this.restTimer.startTime;
+            this.updateRestTimerDisplay();
+        }, 1000);
+        this.updateRestTimerDisplay();
+    },
+
+    stopRestTimer() {
+        if (this.restTimer.intervalId) {
+            clearInterval(this.restTimer.intervalId);
+            this.restTimer.intervalId = null;
+        }
+        this.restTimer.running = false;
+        this.updateRestTimerDisplay();
+    },
+
+    resetRestTimer() {
+        this.stopRestTimer();
+        this.restTimer.elapsed = 0;
+        this.restTimer.startTime = null;
+        this.updateRestTimerDisplay();
+    },
+
+    formatRestTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    },
+
+    updateRestTimerDisplay() {
+        const el = document.getElementById('restTimerDisplay');
+        if (!el) return;
+        const timeStr = this.formatRestTime(this.restTimer.elapsed);
+        el.textContent = timeStr;
+        // Cambiar color según tiempo transcurrido
+        const totalSeconds = Math.floor(this.restTimer.elapsed / 1000);
+        if (totalSeconds < 60) {
+            el.style.color = '#22c55e'; // verde
+        } else if (totalSeconds < 120) {
+            el.style.color = '#f59e0b'; // amarillo
+        } else {
+            el.style.color = '#ef4444'; // rojo
+        }
+        // Actualizar icono play/pausa
+        const iconEl = document.getElementById('restTimerIcon');
+        if (iconEl) {
+            iconEl.className = this.restTimer.running ? 'fas fa-pause text-xs' : 'fas fa-play text-xs';
+        }
+    },
+
+    toggleRefView() {
+        this.refView = this.refView === 'best' ? 'last' : 'best';
+        this.renderWorkout();
+    },
+
+    toggleRestTimer() {
+        if (this.restTimer.running) {
+            this.stopRestTimer();
+        } else {
+            this.startRestTimer();
+        }
+    },
+    // =============================================
+
 
     get categories() { return Storage.get('categories') || []; },
     set categories(v) { Storage.set('categories', v); },
@@ -391,6 +500,12 @@ const app = {
 
     showView(view) {
         this.currentView = view;
+        // Controlar visibilidad del contenedor de barras fijas y padding del body
+        const showBars = view === 'workout' && this.currentWorkout && !this.currentWorkout.isRest;
+        const bottomBars = document.getElementById('bottomBars');
+        if (bottomBars) bottomBars.classList.toggle('hidden', !showBars);
+        document.body.classList.toggle('pb-52', showBars);
+        document.body.classList.toggle('pb-28', !showBars);
         document.querySelectorAll('.nav-item').forEach(b => {
             const isActive = b.dataset.view === view;
             b.classList.toggle('active', isActive);
@@ -564,6 +679,12 @@ const app = {
     },
 
     renderWorkout() {
+        // Controlar visibilidad del contenedor de barras fijas
+        const showBars = this.currentWorkout && !this.currentWorkout.isRest;
+        const bottomBars = document.getElementById('bottomBars');
+        const refPanel = document.getElementById('refPanel');
+        if (bottomBars) bottomBars.classList.toggle('hidden', !showBars);
+        if (refPanel && showBars) refPanel.innerHTML = this.renderReferenceContent();
         if (!this.currentWorkout) {
             document.getElementById('mainContent').innerHTML = `
                 <div class="space-y-6 pb-8 fade-up">
@@ -672,17 +793,6 @@ const app = {
                     </div>` : ''}
                 </div>
 
-                <!-- Referencia del ejercicio (siempre visible) -->
-                <div class="card p-4 max-h-56 overflow-y-auto no-scrollbar">
-                    <div class="flex items-center gap-2 mb-3">
-                        <i class="fas fa-book-open text-[10px] text-primary"></i>
-                        <span class="text-xs font-bold text-textSecondary uppercase tracking-wider">Referencia del ejercicio</span>
-                    </div>
-                    <div id="refPanel">
-                        ${this.renderReferenceContent(cat)}
-                    </div>
-                </div>
-
                 <!-- Input serie -->
                 <div class="card p-5" style="border-color: ${cat.color}25">
                     <div class="flex items-center justify-between mb-5">
@@ -773,6 +883,8 @@ const app = {
                 ` : ''}
             </div>
         `;
+        // Actualizar display del cronómetro si está activo
+        setTimeout(() => this.updateRestTimerDisplay(), 50);
     },
 
     showDatePickerModal(categoryId) {
@@ -862,6 +974,9 @@ const app = {
         }
         const rInput = document.getElementById('inputReps');
         if (rInput) { rInput.value = ''; rInput.focus(); }
+        // Reiniciar e iniciar cronómetro de descanso
+        this.resetRestTimer();
+        this.startRestTimer();
     },
 
     deleteEntry(tempId) {
@@ -946,6 +1061,7 @@ const app = {
         this.workouts = [...this.workouts, this.currentWorkout];
         const savedWorkout = this.currentWorkout;
         this.currentWorkout = null;
+        this.resetRestTimer();
         Storage.clearCurrentWorkout();
         const last = this.workouts[this.workouts.length - 1];
         const msg = last.isRest ? 'Descanso registrado 🛌' : 'Entrenamiento guardado 💪';
@@ -1008,70 +1124,57 @@ const app = {
         return results;
     },
 
-    renderReferenceContent(cat) {
+    renderReferenceContent() {
         const currentExId = this.currentWorkout?.currentExerciseId;
         const currentEx = this.exercises.find(e => e.id === currentExId);
-        const bestSeries = currentExId ? this.getBestSeriesForExercise(currentExId) : [];
+        const view = this.refView;
 
-        let html = '';
+        // Toggle compacto arriba
+        let html = `
+            <div class="flex items-center gap-1 mb-0.5">
+                <button onclick="app.toggleRefView()" class="px-2 py-0.5 rounded text-[9px] font-bold transition ${view === 'best' ? 'bg-warning/20 text-warning' : 'text-textMuted hover:text-text'}">
+                    <i class="fas fa-trophy mr-0.5 text-[8px]"></i>Mejor
+                </button>
+                <button onclick="app.toggleRefView()" class="px-2 py-0.5 rounded text-[9px] font-bold transition ${view === 'last' ? 'bg-primary/20 text-primary' : 'text-textMuted hover:text-text'}">
+                    <i class="fas fa-history mr-0.5 text-[8px]"></i>Anterior
+                </button>
+            </div>
+        `;
 
-        if (currentEx) {
-            html += `
-            <div class="mb-4 pb-4 border-b border-white/5">
-                <div class="flex items-center gap-2 mb-3">
-                    <i class="fas fa-trophy text-warning text-[10px]"></i>
-                    <span class="text-xs font-bold text-text">Mejor: ${currentEx.name}</span>
-                </div>
-                ${bestSeries.length === 0 ? 
-                    '<p class="text-textMuted text-xs">Sin registros previos</p>' :
-                    `<div class="flex flex-wrap gap-2">
-                        ${bestSeries.map(s => `
-                            <div class="bg-warning/10 border border-warning/20 rounded-xl px-3 py-2 text-center min-w-[80px]">
-                                <div class="text-[10px] text-warning font-bold">Serie ${s.seriesNum}</div>
-                                <div class="text-sm text-text font-black">${s.weight} <span class="text-[10px] text-textMuted">kg</span></div>
-                                <div class="text-[10px] text-textMuted">${s.reps} reps</div>
-                            </div>
-                        `).join('')}
-                    </div>`
-                }
+        if (view === 'best') {
+            const bestSeries = currentExId ? this.getBestSeriesForExercise(currentExId) : [];
+            if (!currentEx || bestSeries.length === 0) {
+                return html + '<div class="text-[10px] text-textMuted truncate">Sin registros</div>';
+            }
+            html += `<div class="flex items-center gap-2 overflow-x-auto no-scrollbar min-w-0">
+                ${bestSeries.map(s => `
+                    <span class="text-[10px] text-text font-bold whitespace-nowrap flex-shrink-0">
+                        <span class="text-warning">S${s.seriesNum}</span> ${s.weight}kg×${s.reps}
+                    </span>
+                `).join('')}
             </div>`;
+            return html;
         }
 
+        // view === 'last'
         const lastWorkout = this.getLastWorkoutByCategory(this.currentWorkout.categoryId);
         if (!lastWorkout) {
-            return html + '<p class="text-textMuted text-xs text-center py-4">Sin entrenamientos previos</p>';
+            return html + '<div class="text-[10px] text-textMuted truncate">Sin entrenamientos previos</div>';
         }
 
-        const dateStr = BogotaTime.toLocaleDateString(lastWorkout.date, {day:'numeric', month:'short'});
         const filteredEntries = lastWorkout.entries?.filter(e => e.exerciseId === currentExId) || [];
 
         if (filteredEntries.length === 0) {
-            return html + `<p class="text-textMuted text-xs">No hay datos de "${currentEx?.name}" en la última sesión</p>`;
+            return html + `<div class="text-[10px] text-textMuted truncate">Sin datos de "${currentEx?.name}"</div>`;
         }
 
-        const groups = this.groupEntriesByExercise(filteredEntries);
-        const totalVol = filteredEntries.reduce((s,e) => s + e.weight * e.reps, 0);
-
-        html += `
-            <div class="flex items-center gap-2 mb-3">
-                <span class="text-[10px] font-bold text-textMuted">${dateStr}</span>
-                <span class="text-[10px] text-textMuted ml-auto">${filteredEntries.length} series · ${totalVol.toLocaleString()} kg</span>
-            </div>
-            <div class="space-y-2">
-                ${groups.map(g => {
-                    const ex = this.exercises.find(e => e.id === g.exerciseId);
-                    return `
-                    <div class="bg-white/3 rounded-xl px-3 py-2.5">
-                        <div class="text-xs font-bold text-text mb-1.5">${ex?.name}</div>
-                        <div class="flex flex-wrap gap-1.5">
-                            ${g.entries.map(e => `
-                                <span class="text-[11px] bg-black/30 px-2.5 py-1 rounded-lg text-textSecondary font-semibold">${e.weight}kg × ${e.reps}${e.rir > 0 ? ' RIR'+e.rir : ''}</span>
-                            `).join('')}
-                        </div>
-                    </div>`;
-                }).join('')}
-            </div>
-        `;
+        html += `<div class="flex items-center gap-2 overflow-x-auto no-scrollbar min-w-0">
+            ${filteredEntries.map((e, i) => `
+                <span class="text-[10px] text-text font-bold whitespace-nowrap flex-shrink-0">
+                    <span class="text-primary">S${i + 1}</span> ${e.weight}kg×${e.reps}
+                </span>
+            `).join('')}
+        </div>`;
 
         return html;
     },
@@ -2139,6 +2242,7 @@ const app = {
         }
         Storage.clearCurrentWorkout();
         this.currentWorkout = null;
+        this.resetRestTimer();
         this.showView('workout');
     }
 };
