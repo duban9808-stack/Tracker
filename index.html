@@ -760,6 +760,7 @@ const app = {
         const seriesNum = currentEntries.length + 1;
         const sessionEntries = this.currentWorkout.entries;
         const sessionVolume = sessionEntries.reduce((s, e) => s + e.weight * e.reps, 0);
+        const bestWeight = currentExerciseId ? this.getBestWeightForExercise(currentExerciseId) : null;
 
         document.getElementById('mainContent').innerHTML = `
             <div class="space-y-5 pb-8 fade-up" style="--cat-color: ${cat.color}">
@@ -806,7 +807,7 @@ const app = {
                             <label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2 text-center">Peso kg</label>
                             <div class="flex items-center gap-1">
                                 <button onclick="app.adjustValue('weight', -2.5)" class="touch w-9 h-12 bg-white/5 hover:bg-white/10 rounded-xl text-textMuted flex items-center justify-center text-xs"><i class="fas fa-minus"></i></button>
-                                <input type="number" id="inputWeight" value="" placeholder="0" class="input-field w-full h-12 text-center text-white font-black text-xl">
+                                <input type="number" id="inputWeight" value="${bestWeight || ''}" placeholder="0" class="input-field w-full h-12 text-center text-white font-black text-xl">
                                 <button onclick="app.adjustValue('weight', 2.5)" class="touch w-9 h-12 bg-white/5 hover:bg-white/10 rounded-xl text-textMuted flex items-center justify-center text-xs"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
@@ -1123,6 +1124,14 @@ const app = {
             results.push({ seriesNum: parseInt(sn), weight: best.weight, reps: best.reps });
         });
         return results;
+    },
+
+    getBestWeightForExercise(exerciseId) {
+        const allEntries = this.workouts.flatMap(w => 
+            w.entries?.filter(e => e.exerciseId === exerciseId) || []
+        );
+        if (allEntries.length === 0) return null;
+        return Math.max(...allEntries.map(e => e.weight));
     },
 
     renderReferenceContent() {
