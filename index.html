@@ -399,7 +399,7 @@ const app = {
     currentView: 'dashboard',
     currentWorkout: null,
     restTimer: { startTime: null, elapsed: 0, intervalId: null, running: false },
-    refView: 'last', // 'best' | 'last'
+    refView: 'best', // 'best' | 'last'
 
     init() {
         Storage.init();
@@ -787,12 +787,7 @@ const app = {
                     <select id="exerciseSelect" onchange="app.changeExercise(this.value)" class="input-field w-full px-4 py-3 text-white font-bold text-sm appearance-none cursor-pointer">
                         ${exercises.map(e => `<option value="${e.id}" ${e.id === currentExerciseId ? 'selected' : ''}>${e.name}</option>`).join('')}
                     </select>
-                    ${currentExercise ? `
-                    <div class="flex gap-2 mt-3">
-                        <span class="text-[11px] font-semibold text-textSecondary bg-white/5 px-2.5 py-1 rounded-lg">${currentExercise.muscleGroup}</span>
-                        <span class="text-[11px] font-semibold text-textSecondary bg-white/5 px-2.5 py-1 rounded-lg">${currentExercise.type}</span>
-                        ${this.getCategoryBadges(currentExercise.id)}
-                    </div>` : ''}
+
                 </div>
 
                 <!-- Input serie -->
