@@ -185,6 +185,7 @@
     </style>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<base target="_blank">
 </head>
 <body class="min-h-screen pb-28">
 
@@ -325,6 +326,38 @@ const Storage = {
     clearCurrentWorkout() { localStorage.removeItem('currentWorkout'); }
 };
 
+
+// Helper: Zona horaria Bogotá (UTC-5, sin DST)
+const BogotaTime = {
+    now() {
+        return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+    },
+    toISOString(date = null) {
+        const d = date ? new Date(date) : this.now();
+        const bogota = new Date(d.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+        // Ajustar a medianoche Bogotá
+        bogota.setHours(12, 0, 0, 0);
+        return bogota.toISOString();
+    },
+    toLocaleDateString(date, options = {}) {
+        const d = date ? new Date(date) : this.now();
+        return d.toLocaleDateString('es-CO', { timeZone: 'America/Bogota', ...options });
+    },
+    toDateInputValue(date = null) {
+        const d = date ? new Date(date) : this.now();
+        const bogota = new Date(d.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+        const y = bogota.getFullYear();
+        const m = String(bogota.getMonth() + 1).padStart(2, '0');
+        const day = String(bogota.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    },
+    parseDateInput(dateStr) {
+        // dateStr es "YYYY-MM-DD", interpretar como fecha Bogotá a mediodía
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d, 17, 0, 0)); // 12:00 Bogotá = 17:00 UTC
+    }
+};
+
 const app = {
     currentView: 'dashboard',
     currentWorkout: null,
@@ -387,7 +420,7 @@ const app = {
         const allRMs = workouts.flatMap(w => w.entries?.map(e => this.calcRM(e.weight, e.reps)) || []);
         const bestRM = allRMs.length ? Math.max(...allRMs).toFixed(1) : 0;
         const lastWorkout = workouts.length ? [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date))[0] : null;
-        const lastDate = lastWorkout ? new Date(lastWorkout.date).toLocaleDateString('es-ES', {day:'numeric', month:'short'}) : null;
+        const lastDate = lastWorkout ? BogotaTime.toLocaleDateString(lastWorkout.date, {day:'numeric', month:'short'}) : null;
 
         document.getElementById('mainContent').innerHTML = `
             <div class="space-y-6 pb-8">
@@ -564,7 +597,7 @@ const app = {
                             <i class="fas ${cat.icon} text-4xl" style="color: ${cat.color}"></i>
                         </div>
                         <h2 class="text-2xl font-black text-text tracking-tight">${cat.name}</h2>
-                        <p class="text-sm text-textSecondary mt-2">${new Date(this.currentWorkout.date).toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'})}</p>
+                        <p class="text-sm text-textSecondary mt-2">${BogotaTime.toLocaleDateString(this.currentWorkout.date, {weekday:'long', day:'numeric', month:'long'})}</p>
 
                         <div class="mt-8 space-y-4">
                             <div class="flex items-center justify-center gap-8">
@@ -639,13 +672,13 @@ const app = {
                     </div>` : ''}
                 </div>
 
-                <!-- Referencia colapsable -->
-                <div>
-                    <button onclick="document.getElementById('refPanel').classList.toggle('hidden')" class="flex items-center gap-2 text-xs font-bold text-textSecondary uppercase tracking-wider mb-2">
-                        <i class="fas fa-chevron-down text-[10px] transition-transform" id="refIcon"></i>
-                        Referencia del ejercicio
-                    </button>
-                    <div id="refPanel" class="hidden card p-4 max-h-48 overflow-y-auto no-scrollbar">
+                <!-- Referencia del ejercicio (siempre visible) -->
+                <div class="card p-4 max-h-56 overflow-y-auto no-scrollbar">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="fas fa-book-open text-[10px] text-primary"></i>
+                        <span class="text-xs font-bold text-textSecondary uppercase tracking-wider">Referencia del ejercicio</span>
+                    </div>
+                    <div id="refPanel">
                         ${this.renderReferenceContent(cat)}
                     </div>
                 </div>
@@ -743,7 +776,7 @@ const app = {
     },
 
     showDatePickerModal(categoryId) {
-        const today = new Date().toISOString().split('T')[0];
+        const today = BogotaTime.toDateInputValue();
         const cat = this.categories.find(c => c.id === categoryId);
         const modal = document.getElementById('modalContent');
         modal.innerHTML = `
@@ -771,7 +804,7 @@ const app = {
             return;
         }
         const dateInput = document.getElementById('workoutDate');
-        const selectedDate = dateInput ? new Date(dateInput.value + 'T12:00:00') : new Date();
+        const selectedDate = dateInput ? BogotaTime.parseDateInput(dateInput.value) : BogotaTime.now();
         this.closeModal();
         this.currentWorkout = {
             id: Date.now().toString(),
@@ -857,7 +890,7 @@ const app = {
         const rows = [];
         if (isRest) {
             rows.push({
-                fecha: new Date(workout.date).toLocaleDateString('es-ES'),
+                fecha: BogotaTime.toLocaleDateString(workout.date),
                 categoria: cat?.name || 'Descanso',
                 tipo: 'Descanso',
                 ejercicio: '-',
@@ -874,7 +907,7 @@ const app = {
             workout.entries?.forEach(e => {
                 const ex = this.exercises.find(exe => exe.id === e.exerciseId);
                 rows.push({
-                    fecha: new Date(workout.date).toLocaleDateString('es-ES'),
+                    fecha: BogotaTime.toLocaleDateString(workout.date),
                     categoria: cat?.name || '-',
                     tipo: 'Entrenamiento',
                     ejercicio: ex?.name || '-',
@@ -1009,7 +1042,7 @@ const app = {
             return html + '<p class="text-textMuted text-xs text-center py-4">Sin entrenamientos previos</p>';
         }
 
-        const dateStr = new Date(lastWorkout.date).toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+        const dateStr = BogotaTime.toLocaleDateString(lastWorkout.date, {day:'numeric', month:'short'});
         const filteredEntries = lastWorkout.entries?.filter(e => e.exerciseId === currentExId) || [];
 
         if (filteredEntries.length === 0) {
@@ -1071,7 +1104,7 @@ const app = {
                         filtered.map(w => {
                             const cat = this.categories.find(c => c.id === w.categoryId);
                             const isRest = w.isRest || cat?.id === 'cat5';
-                            const date = new Date(w.date).toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+                            const date = BogotaTime.toLocaleDateString(w.date, {day:'numeric', month:'short'});
                             const totalVol = w.entries?.reduce((s, e) => s + e.weight * e.reps, 0) || 0;
                             const exercisesCount = new Set(w.entries?.map(e => e.exerciseId)).size;
 
@@ -1280,7 +1313,7 @@ const app = {
                                 title: function(context) {
                                     const idx = context[0].dataIndex;
                                     const entry = allEntries[idx];
-                                    return entry ? `${entry.exercise} — ${entry.date.toLocaleDateString('es-ES')}` : '';
+                                    return entry ? `${entry.exercise} — ${BogotaTime.toLocaleDateString(entry.date)}` : '';
                                 }
                             }
                         }
@@ -1737,7 +1770,7 @@ const app = {
         const rows = [];
         workouts.forEach(w => {
             const cat = this.categories.find(c => c.id === w.categoryId);
-            const date = new Date(w.date).toLocaleDateString('es-ES');
+            const date = BogotaTime.toLocaleDateString(w.date);
             const isRest = w.isRest || cat?.id === 'cat5';
             if (isRest) {
                 rows.push([date, cat?.name || 'Descanso', 'Descanso', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
@@ -1756,7 +1789,7 @@ const app = {
         const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `tracker_fuerza_${new Date().toISOString().split('T')[0]}.csv`;
+        link.download = `tracker_fuerza_${BogotaTime.toDateInputValue()}.csv`;
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
