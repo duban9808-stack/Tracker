@@ -185,6 +185,7 @@
     </style>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<base target="_blank">
 </head>
 <body class="min-h-screen pb-28">
 
@@ -207,7 +208,7 @@
     <main id="mainContent" class="pt-20 px-5 max-w-lg mx-auto"></main>
 
     <!-- Bottom Bars (referencia + cronómetro, arriba del nav) -->
-    <div id="bottomBars" class="fixed bottom-[72px] left-0 right-0 z-50 hidden">
+    <div id="bottomBars" class="fixed bottom-[80px] left-0 right-0 z-50 hidden" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
         <!-- Reference Bar -->
         <div class="nav-glass border-t border-white/5">
             <div class="max-w-lg mx-auto px-5 py-2.5 flex items-center gap-3">
@@ -244,7 +245,7 @@
     </div>
 
     <!-- Bottom Nav -->
-    <nav class="fixed bottom-0 left-0 right-0 z-50 nav-glass border-t border-white/5">
+    <nav class="fixed bottom-0 left-0 right-0 z-50 nav-glass border-t border-white/5" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
         <div class="flex justify-around items-center py-3 max-w-lg mx-auto">
             <button onclick="app.showView('dashboard')" class="nav-item touch flex flex-col items-center gap-1 p-2 text-textMuted" data-view="dashboard">
                 <i class="fas fa-home text-lg"></i>
@@ -504,7 +505,7 @@ const app = {
         const showBars = view === 'workout' && this.currentWorkout && !this.currentWorkout.isRest;
         const bottomBars = document.getElementById('bottomBars');
         if (bottomBars) bottomBars.classList.toggle('hidden', !showBars);
-        document.body.classList.toggle('pb-52', showBars);
+        document.body.classList.toggle('pb-56', showBars);
         document.body.classList.toggle('pb-28', !showBars);
         document.querySelectorAll('.nav-item').forEach(b => {
             const isActive = b.dataset.view === view;
@@ -973,7 +974,7 @@ const app = {
             if (wInput) wInput.value = lastEntry.weight;
         }
         const rInput = document.getElementById('inputReps');
-        if (rInput) { rInput.value = ''; rInput.focus(); }
+        if (rInput) { rInput.value = ''; }
         // Reiniciar e iniciar cronómetro de descanso
         this.resetRestTimer();
         this.startRestTimer();
