@@ -186,6 +186,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <base target="_blank">
+<base target="_blank">
 </head>
 <body class="min-h-screen pb-28">
 
@@ -238,6 +239,9 @@
                     </button>
                     <button onclick="app.resetRestTimer()" class="touch w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-textMuted hover:text-text transition-colors">
                         <i class="fas fa-rotate-right text-[10px]"></i>
+                    </button>
+                    <button onclick="app.openSoundConfigModal()" class="touch w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-textMuted hover:text-text transition-colors">
+                        <i class="fas fa-sliders text-[10px]"></i>
                     </button>
                 </div>
             </div>
@@ -398,7 +402,7 @@ const BogotaTime = {
 const app = {
     currentView: 'dashboard',
     currentWorkout: null,
-    restTimer: { startTime: null, elapsed: 0, intervalId: null, running: false },
+    restTimer: { startTime: null, elapsed: 0, intervalId: null, running: false, soundPlayed: false },
     refView: 'best', // 'best' | 'last'
 
     init() {
@@ -436,6 +440,7 @@ const app = {
         this.stopRestTimer();
         this.restTimer.elapsed = 0;
         this.restTimer.startTime = null;
+        this.restTimer.soundPlayed = false;
         this.updateRestTimerDisplay();
     },
 
@@ -465,6 +470,13 @@ const app = {
         if (iconEl) {
             iconEl.className = this.restTimer.running ? 'fas fa-pause text-xs' : 'fas fa-play text-xs';
         }
+        // Alerta de sonido al alcanzar el tiempo configurado
+        const soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+        const threshold = parseInt(localStorage.getItem('soundThreshold')) || 90;
+        if (soundEnabled && !this.restTimer.soundPlayed && totalSeconds >= threshold) {
+            this.playSound();
+            this.restTimer.soundPlayed = true;
+        }
     },
 
     toggleRefView() {
@@ -477,6 +489,99 @@ const app = {
             this.stopRestTimer();
         } else {
             this.startRestTimer();
+        }
+    },
+
+    playSound(previewType = null) {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const soundType = previewType || localStorage.getItem('soundType') || 'beep';
+            const ctx = new AudioContext();
+            const now = ctx.currentTime;
+            const masterGain = ctx.createGain();
+            masterGain.connect(ctx.destination);
+            masterGain.gain.setValueAtTime(0.3, now);
+
+            switch (soundType) {
+                case 'double': {
+                    [0, 0.25].forEach((offset) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(masterGain);
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(880, now + offset);
+                        gain.gain.setValueAtTime(0.3, now + offset);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.2);
+                        osc.start(now + offset);
+                        osc.stop(now + offset + 0.2);
+                    });
+                    break;
+                }
+                case 'alarm': {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(masterGain);
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(1200, now);
+                    osc.frequency.setValueAtTime(800, now + 0.15);
+                    osc.frequency.setValueAtTime(1200, now + 0.3);
+                    osc.frequency.setValueAtTime(800, now + 0.45);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                    break;
+                }
+                case 'chime': {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(masterGain);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.exponentialRampToValueAtTime(1046.5, now + 0.1);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+                    osc.start(now);
+                    osc.stop(now + 1.2);
+                    break;
+                }
+                case 'digital': {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(masterGain);
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(2000, now);
+                    osc.frequency.setValueAtTime(1500, now + 0.08);
+                    osc.frequency.setValueAtTime(2000, now + 0.16);
+                    osc.frequency.setValueAtTime(1500, now + 0.24);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                    break;
+                }
+                default: {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(masterGain);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, now);
+                    osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                    break;
+                }
+            }
+        } catch (e) {
+            console.error('Error reproduciendo sonido:', e);
         }
     },
     // =============================================
@@ -2249,11 +2354,219 @@ const app = {
         this.currentWorkout = null;
         this.resetRestTimer();
         this.showView('workout');
+    },
+
+    // ========== MODAL DE CONFIGURACIÓN DE SONIDO ==========
+    openSoundConfigModal() {
+        const soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+        const threshold = parseInt(localStorage.getItem('soundThreshold')) || 90;
+        const currentType = localStorage.getItem('soundType') || 'beep';
+        const min = Math.floor(threshold / 60);
+        const sec = threshold % 60;
+
+        const soundOptions = [
+            { id: 'beep', name: 'Pitido clásico', icon: 'fa-volume-high', desc: 'Tono suave descendente' },
+            { id: 'double', name: 'Doble pitido', icon: 'fa-volume-up', desc: 'Dos tonos seguidos' },
+            { id: 'alarm', name: 'Alarma', icon: 'fa-bell', desc: 'Sonido de alerta fuerte' },
+            { id: 'chime', name: 'Campana', icon: 'fa-music', desc: 'Campana suave y larga' },
+            { id: 'digital', name: 'Digital', icon: 'fa-microchip', desc: 'Sonido tipo reloj digital' }
+        ];
+
+        let htmlModal = '<h3 class="text-xl font-black text-text mb-1 tracking-tight">Configurar alerta</h3>';
+        htmlModal += '<p class="text-textSecondary text-sm mb-5">Personaliza el sonido del cronómetro</p>';
+        htmlModal += '<div class="space-y-4">';
+
+        htmlModal += '<div class="flex items-center justify-between bg-white/3 rounded-xl px-4 py-3">';
+        htmlModal += '<div><div class="text-sm font-bold text-text">Activar sonido</div>';
+        htmlModal += '<div class="text-xs text-textMuted">Reproducir al alcanzar el tiempo</div></div>';
+        htmlModal += '<button onclick="app.toggleSoundEnabledFromModal()" class="touch w-12 h-7 rounded-full transition-all duration-200 ' + (soundEnabled ? 'bg-success' : 'bg-white/10') + ' relative">';
+        htmlModal += '<div class="w-5 h-5 rounded-full bg-white absolute top-1 transition-all duration-200 ' + (soundEnabled ? 'left-6' : 'left-1') + '"></div></button></div>';
+
+        htmlModal += '<div><label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Tiempo de alerta</label>';
+        htmlModal += '<div class="grid grid-cols-2 gap-3">';
+        htmlModal += '<div><label class="text-[10px] text-textMuted block mb-1 text-center">Minutos</label>';
+        htmlModal += '<input type="number" id="soundModalMin" value="' + min + '" min="0" max="10" class="input-field w-full h-12 text-center text-white font-black text-xl"></div>';
+        htmlModal += '<div><label class="text-[10px] text-textMuted block mb-1 text-center">Segundos</label>';
+        htmlModal += '<input type="number" id="soundModalSec" value="' + sec + '" min="0" max="59" class="input-field w-full h-12 text-center text-white font-black text-xl"></div>';
+        htmlModal += '</div></div>';
+
+        htmlModal += '<div><label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Tipo de sonido</label>';
+        htmlModal += '<div class="space-y-2">';
+        soundOptions.forEach(opt => {
+            const isChecked = currentType === opt.id ? 'checked' : '';
+            const borderClass = currentType === opt.id ? 'border-primary/40 bg-primary/5' : 'border-transparent';
+            htmlModal += '<label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white/5 transition-colors border ' + borderClass + '">';
+            htmlModal += '<input type="radio" name="soundTypeSelect" value="' + opt.id + '" ' + isChecked + ' class="w-5 h-5 rounded-full border-white/10 text-primary focus:ring-primary bg-black/30">';
+            htmlModal += '<span class="text-sm text-text font-semibold">' + opt.name + '</span>';
+            htmlModal += '<span class="w-3 h-3 rounded-full ml-auto" style="background: ' + (opt.id === 'beep' ? '#3b82f6' : opt.id === 'double' ? '#06b6d4' : opt.id === 'alarm' ? '#ef4444' : opt.id === 'chime' ? '#22c55e' : '#f59e0b') + '"></span>';
+            htmlModal += '</label>';
+        });
+        htmlModal += '</div></div>';
+
+        htmlModal += '<button onclick="app.saveSoundConfigFromModal()" class="touch btn-primary w-full py-3 text-sm">';
+        htmlModal += '<i class="fas fa-save mr-2"></i>Guardar configuración</button>';
+        htmlModal += '<button onclick="app.testSoundFromModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">';
+        htmlModal += '<i class="fas fa-play mr-2"></i>Probar sonido</button>';
+        htmlModal += '<button onclick="app.openHeadphoneConfigModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">';
+        htmlModal += '<i class="fas fa-headphones mr-2"></i>Configurar gestos de audífono</button>';
+        htmlModal += '<button onclick="app.closeModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">Cerrar</button>';
+        htmlModal += '</div>';
+
+        document.getElementById('modalContent').innerHTML = htmlModal;
+        document.getElementById('modalOverlay').classList.remove('hidden');
+    },
+
+    toggleSoundEnabledFromModal() {
+        const current = localStorage.getItem('soundEnabled') !== 'false';
+        localStorage.setItem('soundEnabled', String(!current));
+        this.openSoundConfigModal();
+    },
+
+    saveSoundConfigFromModal() {
+        const min = parseInt(document.getElementById('soundModalMin')?.value) || 0;
+        const sec = parseInt(document.getElementById('soundModalSec')?.value) || 0;
+        const total = Math.max(0, min * 60 + sec);
+        localStorage.setItem('soundThreshold', String(total));
+        const selectedType = document.querySelector('input[name="soundTypeSelect"]:checked')?.value || 'beep';
+        localStorage.setItem('soundType', selectedType);
+        this.closeModal();
+        this.showToast('Configuración guardada 🔊');
+    },
+
+    testSoundFromModal() {
+        const selectedType = document.querySelector('input[name="soundTypeSelect"]:checked')?.value || 'beep';
+        this.playSound(selectedType);
+        this.showToast('Sonido de prueba');
+    },
+
+    // ========== FEEDBACK VISUAL PARA GESTOS DE AUDÍFONOS ==========
+    showHeadphoneFeedback(action) {
+        const existing = document.getElementById('headphoneFeedback');
+        if (existing) existing.remove();
+
+        const el = document.createElement('div');
+        el.id = 'headphoneFeedback';
+        const icon = action === 'playpause'
+            ? (this.restTimer.running ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>')
+            : '<i class="fas fa-rotate-right"></i>';
+        const label = action === 'playpause'
+            ? (this.restTimer.running ? 'Pausado' : 'Iniciado')
+            : 'Reiniciado';
+
+        el.innerHTML = '<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:80;background:rgba(17,24,39,0.95);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:24px 36px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,0.6);animation:headphonePop 0.3s cubic-bezier(0.16,1,0.3,1);">' +
+            '<div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;font-size:22px;color:white;box-shadow:0 8px 24px rgba(59,130,246,0.35);">' + icon + '</div>' +
+            '<div style="font-weight:800;font-size:15px;color:#f9fafb;">' + label + '</div>' +
+            '<div style="font-size:11px;color:#6b7280;font-weight:600;">Audífono detectado</div>' +
+            '</div>' +
+            '<style>@keyframes headphonePop{from{opacity:0;transform:translate(-50%,-50%) scale(0.8)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes headphoneFade{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(0.9)}}</style>';
+        document.body.appendChild(el);
+        setTimeout(() => {
+            const popup = el.querySelector('div');
+            if (popup) popup.style.animation = 'headphoneFade 0.25s ease forwards';
+        }, 900);
+        setTimeout(() => el.remove(), 1200);
+    },
+
+    // ========== CONFIGURACIÓN DE GESTOS DE AUDÍFONOS ==========
+    openHeadphoneConfigModal() {
+        const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || {
+            MediaPlayPause: 'toggle',
+            MediaTrackNext: 'reset',
+            MediaTrackPrevious: 'reset'
+        };
+
+        const gestureOptions = [
+            { key: 'MediaPlayPause', label: 'Play / Pausa', icon: 'fa-play', desc: 'Tocar una vez o doble toque' },
+            { key: 'MediaTrackNext', label: 'Siguiente pista', icon: 'fa-forward', desc: 'Doble toque derecho' },
+            { key: 'MediaTrackPrevious', label: 'Pista anterior', icon: 'fa-backward', desc: 'Doble toque izquierdo' }
+        ];
+
+        const actionOptions = [
+            { value: 'toggle', label: 'Play / Pausa', icon: 'fa-play' },
+            { value: 'reset', label: 'Reiniciar', icon: 'fa-rotate-right' },
+            { value: 'none', label: 'Nada', icon: 'fa-ban' }
+        ];
+
+        let htmlModal = '<h3 class="text-xl font-black text-text mb-1 tracking-tight">Gestos de audífono</h3>';
+        htmlModal += '<p class="text-textSecondary text-sm mb-5">Asigna una acción a cada gesto</p>';
+        htmlModal += '<div class="space-y-3">';
+
+        gestureOptions.forEach(g => {
+            htmlModal += '<div class="card p-4">';
+            htmlModal += '<div class="flex items-center gap-3 mb-3">';
+            htmlModal += '<div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">';
+            htmlModal += '<i class="fas ' + g.icon + ' text-primary text-xs"></i></div>';
+            htmlModal += '<div><div class="text-sm font-bold text-text">' + g.label + '</div>';
+            htmlModal += '<div class="text-[11px] text-textMuted">' + g.desc + '</div></div></div>';
+            htmlModal += '<div class="grid grid-cols-3 gap-2">';
+            actionOptions.forEach(a => {
+                const checked = gestures[g.key] === a.value ? 'checked' : '';
+                const iconColor = a.value === 'none' ? 'text-textMuted' : 'text-primary';
+                const labelColor = a.value === 'none' ? 'text-textMuted' : 'text-text';
+                htmlModal += '<label class="cursor-pointer">';
+                htmlModal += '<input type="radio" name="gesture_' + g.key + '" value="' + a.value + '" ' + checked + ' class="hidden peer">';
+                htmlModal += '<div class="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-white/5 bg-white/[0.02] peer-checked:border-primary/50 peer-checked:bg-primary/10 transition-all text-center">';
+                htmlModal += '<i class="fas ' + a.icon + ' text-xs ' + iconColor + '"></i>';
+                htmlModal += '<span class="text-[10px] font-bold ' + labelColor + '">' + a.label + '</span>';
+                htmlModal += '</div></label>';
+            });
+            htmlModal += '</div></div>';
+        });
+
+        htmlModal += '<button onclick="app.saveHeadphoneConfig()" class="touch btn-primary w-full py-3.5 text-sm">';
+        htmlModal += '<i class="fas fa-save mr-2"></i>Guardar configuración</button>';
+        htmlModal += '<button onclick="app.testHeadphoneGestures()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">';
+        htmlModal += '<i class="fas fa-vial mr-2"></i>Probar gestos</button>';
+        htmlModal += '<button onclick="app.openSoundConfigModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">';
+        htmlModal += '<i class="fas fa-arrow-left mr-2"></i>Volver a sonido</button>';
+        htmlModal += '</div>';
+
+        document.getElementById('modalContent').innerHTML = htmlModal;
+        document.getElementById('modalOverlay').classList.remove('hidden');
+    },
+
+    saveHeadphoneConfig() {
+        const gestures = {};
+        ['MediaPlayPause', 'MediaTrackNext', 'MediaTrackPrevious'].forEach(key => {
+            const selected = document.querySelector('input[name="gesture_' + key + '"]:checked');
+            gestures[key] = selected ? selected.value : 'none';
+        });
+        localStorage.setItem('headphoneGestures', JSON.stringify(gestures));
+        this.showToast('Gestos guardados 🎧');
+        this.openHeadphoneConfigModal();
+    },
+
+    testHeadphoneGestures() {
+        this.showToast('Usa los gestos de tu audífono para probar');
     }
 };
 
 document.getElementById('modalOverlay').addEventListener('click', (e) => {
     if (e.target.id === 'modalOverlay') app.closeModal();
+});
+
+// ========== GESTOS DE AUDÍFONOS BLUETOOTH ==========
+let headphoneDebounce = false;
+document.addEventListener('keydown', (e) => {
+    if (headphoneDebounce) return;
+    const key = e.code || e.key;
+    const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || {
+        MediaPlayPause: 'toggle',
+        MediaTrackNext: 'reset',
+        MediaTrackPrevious: 'reset'
+    };
+    const action = gestures[key];
+    if (!action || action === 'none') return;
+    e.preventDefault();
+    headphoneDebounce = true;
+    if (action === 'toggle') {
+        app.toggleRestTimer();
+        app.showHeadphoneFeedback('playpause');
+    } else if (action === 'reset') {
+        app.resetRestTimer();
+        app.showHeadphoneFeedback('reset');
+    }
+    setTimeout(() => headphoneDebounce = false, 500);
 });
 
 app.init();
