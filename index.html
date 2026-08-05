@@ -2473,102 +2473,89 @@ const app = {
 
     // ========== CONFIGURACIÓN DE GESTOS DE AUDÍFONOS ==========
     openHeadphoneConfigModal() {
-        const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || {
-            MediaPlayPause: 'toggle',
-            MediaTrackNext: 'reset',
-            MediaTrackPrevious: 'reset'
-        };
-        const selectedModel = localStorage.getItem('headphoneModel') || 'generic';
-        const isMediaSessionActive = mediaSessionActive;
+        const cfg = getBtConfig();
+        const isActive = mediaSessionActive;
 
-        const models = [
-            { id: 'generic', name: 'Genérico / Otros', icon: 'fa-headphones', desc: 'La mayoría de audífonos Bluetooth' },
-            { id: 'airpods', name: 'AirPods / AirPods Pro', icon: 'fa-apple', desc: 'Apple AirPods, AirPods Pro, AirPods Max' },
-            { id: 'galaxy', name: 'Galaxy Buds', icon: 'fa-android', desc: 'Samsung Galaxy Buds, Buds Pro, Buds Live' },
-            { id: 'sony', name: 'Sony WH / WF', icon: 'fa-music', desc: 'Sony WH-1000XM, WF-1000XM, etc.' },
-            { id: 'beats', name: 'Beats / Powerbeats', icon: 'fa-bolt', desc: 'Beats Studio, Powerbeats Pro' }
-        ];
-
-        const modelInstructions = {
-            generic: '<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior',
-            airpods: '<b>2 toques</b> (cualquier lado) = Play/Pause<br><b>"Hey Siri"</b> = Control por voz<br><i>Next/Prev desde el teléfono</i>',
-            galaxy: '<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Mantener</b> = Volumen',
-            sony: '<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Personalizable</b> en app Sony',
-            beats: '<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior'
-        };
-
-        const gestureOptions = [
-            { key: 'MediaPlayPause', label: 'Play / Pausa', icon: 'fa-play', desc: 'Tocar una vez o doble toque' },
-            { key: 'MediaTrackNext', label: 'Siguiente pista', icon: 'fa-forward', desc: 'Doble toque derecho / 2 toques' },
-            { key: 'MediaTrackPrevious', label: 'Pista anterior', icon: 'fa-backward', desc: 'Doble toque izquierdo / 3 toques' }
+        const commands = [
+            { key: 'play',     icon: 'fa-play',       color: '#22c55e', desc: 'Play / Pausa (Media Session)' },
+            { key: 'pause',    icon: 'fa-pause',      color: '#3b82f6', desc: 'Pausa (Media Session)' },
+            { key: 'next',     icon: 'fa-forward',    color: '#f59e0b', desc: 'Siguiente pista (Media Session)' },
+            { key: 'previous', icon: 'fa-backward',   color: '#ef4444', desc: 'Pista anterior (Media Session)' },
+            { key: 'key',      icon: 'fa-keyboard',   color: '#a855f7', desc: 'Teclado / Evento de tecla' }
         ];
 
         const actionOptions = [
             { value: 'toggle', label: 'Play / Pausa', icon: 'fa-play' },
-            { value: 'reset', label: 'Reiniciar', icon: 'fa-rotate-right' },
-            { value: 'none', label: 'Nada', icon: 'fa-ban' }
+            { value: 'reset',  label: 'Reiniciar',    icon: 'fa-rotate-right' },
+            { value: 'none',   label: 'Nada',         icon: 'fa-ban' }
         ];
 
         let htmlModal = '<h3 class="text-xl font-black text-text mb-1 tracking-tight">Gestos de audífono</h3>';
-        htmlModal += '<p class="text-textSecondary text-sm mb-5">Selecciona tu modelo y asigna acciones</p>';
-        htmlModal += '<div class="space-y-3">';
+        htmlModal += '<p class="text-textSecondary text-sm mb-5">Etiqueta cada comando según tu audífono</p>';
 
-        // Selector de modelo
-        htmlModal += '<div><label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Modelo de audífono</label>';
-        htmlModal += '<select id="headphoneModelSelect" onchange="app.onHeadphoneModelChange()" class="input-field w-full px-4 py-3 text-white font-bold text-sm appearance-none cursor-pointer">';
-        models.forEach(m => {
-            htmlModal += '<option value="' + m.id + '" ' + (selectedModel === m.id ? 'selected' : '') + '>' + m.name + '</option>';
-        });
-        htmlModal += '</select></div>';
-
-        // Instrucciones del modelo
-        htmlModal += '<div id="modelInstructions" class="bg-white/3 rounded-xl px-4 py-3">';
-        htmlModal += '<div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mb-1">Gestos de tu modelo</div>';
-        htmlModal += '<div class="text-xs text-textSecondary font-medium leading-relaxed">' + (modelInstructions[selectedModel] || modelInstructions.generic) + '</div>';
-        htmlModal += '</div>';
-
-        // Estado de Media Session
-        htmlModal += '<div id="mediaSessionStatus" class="flex items-center gap-3 bg-white/3 rounded-xl px-4 py-3">';
-        htmlModal += '<div class="w-8 h-8 rounded-lg ' + (isMediaSessionActive ? 'bg-success/15' : 'bg-warning/15') + ' flex items-center justify-center">';
-        htmlModal += '<i class="fas ' + (isMediaSessionActive ? 'fa-check text-success' : 'fa-exclamation text-warning') + ' text-xs"></i></div>';
-        htmlModal += '<div class="flex-1"><div class="text-sm font-bold text-text">' + (isMediaSessionActive ? 'Control activado' : 'Control no activado') + '</div>';
-        htmlModal += '<div class="text-xs text-textMuted">' + (isMediaSessionActive ? 'Los gestos de tu audífono funcionan' : 'Toca el botón de abajo para activar') + '</div></div></div>';
+        // Estado
+        htmlModal += '<div class="flex items-center gap-3 bg-white/3 rounded-xl px-4 py-3 mb-5">';
+        htmlModal += '<div class="w-8 h-8 rounded-lg ' + (isActive ? 'bg-success/15' : 'bg-warning/15') + ' flex items-center justify-center">';
+        htmlModal += '<i class="fas ' + (isActive ? 'fa-check text-success' : 'fa-exclamation text-warning') + ' text-xs"></i></div>';
+        htmlModal += '<div class="flex-1"><div class="text-sm font-bold text-text">' + (isActive ? 'Control activado' : 'Control no activado') + '</div>';
+        htmlModal += '<div class="text-xs text-textMuted">' + (isActive ? 'Toca los audífonos para probar' : 'Inicia un entrenamiento primero') + '</div></div></div>';
 
         // Botón activar
-        htmlModal += '<button onclick="app.activateHeadphoneControl()" class="touch btn-primary w-full py-3 text-sm">';
-        htmlModal += '<i class="fas fa-power-off mr-2"></i>' + (isMediaSessionActive ? 'Reactivar control' : 'Activar control por audífono') + '</button>';
+        htmlModal += '<button onclick="app.activateHeadphoneControl()" class="touch btn-primary w-full py-3 text-sm mb-5">';
+        htmlModal += '<i class="fas fa-power-off mr-2"></i>' + (isActive ? 'Reactivar control' : 'Activar control por audífono') + '</button>';
 
-        // Asignación de gestos
-        htmlModal += '<div class="pt-2"><label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Asignar acciones</label></div>';
-        gestureOptions.forEach(g => {
+        // Modo aprendizaje
+        htmlModal += '<div class="card p-4 mb-5" style="border:1px solid rgba(59,130,246,0.2)">';
+        htmlModal += '<div class="flex items-center justify-between mb-3">';
+        htmlModal += '<div class="flex items-center gap-2"><i class="fas fa-graduation-cap text-primary text-sm"></i><span class="text-sm font-bold text-text">Modo aprendizaje</span></div>';
+        htmlModal += '<button onclick="app.toggleLearningMode()" id="learnToggleBtn" class="touch px-3 py-1.5 rounded-lg text-xs font-bold ' + (learningMode ? 'bg-success text-white' : 'bg-white/10 text-textMuted') + ' transition-colors">' + (learningMode ? 'ACTIVO' : 'Inactivo') + '</button>';
+        htmlModal += '</div>';
+        htmlModal += '<p class="text-xs text-textMuted mb-2">Activa este modo y toca tu audífono. La app detectará qué comando llega para que sepas cuál configurar.</p>';
+        htmlModal += '<div id="learnDisplay" class="text-center py-3 rounded-xl bg-black/20 text-sm font-bold text-textMuted">' + (lastDetectedCommand ? '<span style="color:#22c55e"><i class="fas fa-bolt mr-1"></i>' + (cfg[lastDetectedCommand]?.label || lastDetectedCommand) + '</span> <span style="color:#6b7280">(' + lastDetectedCommand + ')</span>' : 'Esperando gesto...') + '</div>';
+        htmlModal += '</div>';
+
+        // Configuración por comando
+        htmlModal += '<div class="space-y-3 mb-5">';
+        htmlModal += '<label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-1">Asignar acciones</label>';
+
+        commands.forEach(cmd => {
+            const c = cfg[cmd.key] || DEFAULT_BT_CONFIG[cmd.key];
             htmlModal += '<div class="card p-4">';
             htmlModal += '<div class="flex items-center gap-3 mb-3">';
-            htmlModal += '<div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">';
-            htmlModal += '<i class="fas ' + g.icon + ' text-primary text-xs"></i></div>';
-            htmlModal += '<div><div class="text-sm font-bold text-text">' + g.label + '</div>';
-            htmlModal += '<div class="text-[11px] text-textMuted">' + g.desc + '</div></div></div>';
+            htmlModal += '<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:' + cmd.color + '15">';
+            htmlModal += '<i class="fas ' + cmd.icon + ' text-xs" style="color:' + cmd.color + '"></i></div>';
+            htmlModal += '<div class="flex-1 min-w-0"><div class="text-xs text-textMuted font-medium">' + cmd.desc + '</div></div></div>';
+
+            // Etiqueta personalizada
+            htmlModal += '<div class="mb-3">';
+            htmlModal += '<label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-1.5">Etiqueta (ej: Derecho 1 toque)</label>';
+            htmlModal += '<input type="text" id="btLabel_' + cmd.key + '" value="' + (c.label || '') + '" placeholder="Ej: Derecho 1 toque" class="input-field w-full px-3 py-2.5 text-white font-bold text-sm">';
+            htmlModal += '</div>';
+
+            // Selector de acción
             htmlModal += '<div class="grid grid-cols-3 gap-2">';
             actionOptions.forEach(a => {
-                const checked = gestures[g.key] === a.value ? 'checked' : '';
-                const iconColor = a.value === 'none' ? 'text-textMuted' : 'text-primary';
-                const labelColor = a.value === 'none' ? 'text-textMuted' : 'text-text';
+                const checked = c.action === a.value ? 'checked' : '';
                 htmlModal += '<label class="cursor-pointer">';
-                htmlModal += '<input type="radio" name="gesture_' + g.key + '" value="' + a.value + '" ' + checked + ' class="hidden peer">';
-                htmlModal += '<div class="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-white/5 bg-white/[0.02] peer-checked:border-primary/50 peer-checked:bg-primary/10 transition-all text-center">';
-                htmlModal += '<i class="fas ' + a.icon + ' text-xs ' + iconColor + '"></i>';
-                htmlModal += '<span class="text-[10px] font-bold ' + labelColor + '">' + a.label + '</span>';
+                htmlModal += '<input type="radio" name="btAction_' + cmd.key + '" value="' + a.value + '" ' + checked + ' class="hidden peer">';
+                htmlModal += '<div class="flex flex-col items-center gap-1 p-2 rounded-xl border border-white/5 bg-white/[0.02] peer-checked:border-primary/50 peer-checked:bg-primary/10 transition-all text-center">';
+                htmlModal += '<i class="fas ' + a.icon + ' text-xs ' + (a.value === 'none' ? 'text-textMuted' : 'text-primary') + '"></i>';
+                htmlModal += '<span class="text-[10px] font-bold ' + (a.value === 'none' ? 'text-textMuted' : 'text-text') + '">' + a.label + '</span>';
                 htmlModal += '</div></label>';
             });
             htmlModal += '</div></div>';
         });
 
-        htmlModal += '<button onclick="app.saveHeadphoneConfig()" class="touch btn-primary w-full py-3.5 text-sm">';
-        htmlModal += '<i class="fas fa-save mr-2"></i>Guardar configuración</button>';
-        htmlModal += '<button onclick="app.testHeadphoneGestures()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">';
-        htmlModal += '<i class="fas fa-vial mr-2"></i>Probar gestos</button>';
-        htmlModal += '<button onclick="app.openSoundConfigModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">';
-        htmlModal += '<i class="fas fa-arrow-left mr-2"></i>Volver a sonido</button>';
         htmlModal += '</div>';
+
+        // Botones
+        htmlModal += '<button onclick="app.saveBtConfig()" class="touch btn-primary w-full py-3.5 text-sm mb-2">';
+        htmlModal += '<i class="fas fa-save mr-2"></i>Guardar configuración</button>';
+        htmlModal += '<button onclick="app.testHeadphoneGestures()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors mb-2">';
+        htmlModal += '<i class="fas fa-vial mr-2"></i>Probar gestos</button>';
+        htmlModal += '<button onclick="app.openSoundConfigModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors mb-2">';
+        htmlModal += '<i class="fas fa-arrow-left mr-2"></i>Volver a sonido</button>';
+        htmlModal += '<button onclick="app.closeModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">Cerrar</button>';
 
         document.getElementById('modalContent').innerHTML = htmlModal;
         document.getElementById('modalOverlay').classList.remove('hidden');
@@ -2590,20 +2577,8 @@ const app = {
             this.openHeadphoneConfigModal();
         });
     },
-
-    saveHeadphoneConfig() {
-        const gestures = {};
-        ['MediaPlayPause', 'MediaTrackNext', 'MediaTrackPrevious'].forEach(key => {
-            const selected = document.querySelector('input[name="gesture_' + key + '"]:checked');
-            gestures[key] = selected ? selected.value : 'none';
-        });
-        localStorage.setItem('headphoneGestures', JSON.stringify(gestures));
-        this.showToast('Gestos guardados 🎧');
-        this.openHeadphoneConfigModal();
-    },
-
-    testHeadphoneGestures() {
-        this.showToast('Usa los gestos de tu audífono para probar');
+testHeadphoneGestures() {
+        this.showToast('Usa los gestos de tu audífono. Mira el modo aprendizaje para ver qué detecta.');
     }
 };
 
@@ -2624,6 +2599,25 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
 let mediaAudioEl = null;
 let mediaSessionActive = false;
 let headphoneDebounce = false;
+let lastDetectedCommand = null;
+let learningMode = false;
+
+const DEFAULT_BT_CONFIG = {
+    play:     { label: 'Derecho 1 toque', action: 'toggle' },
+    pause:    { label: 'Izquierdo 1 toque', action: 'toggle' },
+    next:     { label: 'Derecho 2 toques', action: 'reset' },
+    previous: { label: 'Izquierdo 2 toques', action: 'reset' },
+    key:      { label: 'Teclado / Otro', action: 'toggle' }
+};
+
+function getBtConfig() {
+    try { return JSON.parse(localStorage.getItem('btConfig')) || DEFAULT_BT_CONFIG; }
+    catch { return DEFAULT_BT_CONFIG; }
+}
+
+function setBtConfig(cfg) {
+    localStorage.setItem('btConfig', JSON.stringify(cfg));
+}
 
 function createSilentWavBlob(durationSec = 6.0) {
     const sampleRate = 8000;
@@ -2642,10 +2636,21 @@ function createSilentWavBlob(durationSec = 6.0) {
     return new Blob([arr], { type: 'audio/wav' });
 }
 
-function handleHeadphoneAction(action) {
+function handleHeadphoneAction(command) {
     if (headphoneDebounce) return;
     headphoneDebounce = true;
     try {
+        const cfg = getBtConfig();
+        const action = cfg[command]?.action || 'none';
+        lastDetectedCommand = command;
+        if (learningMode) {
+            app.showToast('Detectado: ' + (cfg[command]?.label || command), 'success');
+            const learnDisplay = document.getElementById('learnDisplay');
+            if (learnDisplay) {
+                learnDisplay.innerHTML = '<span style="color:#22c55e"><i class="fas fa-bolt mr-1"></i>' + (cfg[command]?.label || command) + '</span> <span style="color:#6b7280">(' + command + ')</span>';
+            }
+            return;
+        }
         if (action === 'toggle') {
             app.toggleRestTimer();
             app.showHeadphoneFeedback('playpause');
@@ -2663,16 +2668,16 @@ function setupMediaSessionHandlers() {
     try {
         navigator.mediaSession.setActionHandler('play', () => {
             if (mediaAudioEl && mediaAudioEl.paused) mediaAudioEl.play().catch(()=>{});
-            handleHeadphoneAction('toggle');
+            handleHeadphoneAction('play');
         });
         navigator.mediaSession.setActionHandler('pause', () => {
-            handleHeadphoneAction('toggle');
+            handleHeadphoneAction('pause');
         });
         navigator.mediaSession.setActionHandler('nexttrack', () => {
-            handleHeadphoneAction('reset');
+            handleHeadphoneAction('next');
         });
         navigator.mediaSession.setActionHandler('previoustrack', () => {
-            handleHeadphoneAction('reset');
+            handleHeadphoneAction('previous');
         });
         navigator.mediaSession.metadata = new MediaMetadata({
             title: 'Tracker Fuerza',
@@ -2689,8 +2694,6 @@ function setupMediaSessionHandlers() {
     }
 }
 
-// ACTIVAR: debe llamarse DENTRO de un gesto de usuario (click/touch)
-// Chrome Android bloquea autoplay sin interacción previa del usuario.
 function activateBluetoothControls() {
     if (mediaSessionActive) return Promise.resolve(true);
     mediaAudioEl = document.getElementById('mediaAudio');
@@ -2727,13 +2730,13 @@ document.addEventListener('keydown', (e) => {
     const key = e.key || e.code;
     if (key === 'MediaPlayPause' || key === 'MediaPlay' || key === 'MediaPause' || key === 'MediaStop') {
         e.preventDefault();
-        handleHeadphoneAction('toggle');
+        handleHeadphoneAction('key');
     } else if (key === 'MediaTrackNext') {
         e.preventDefault();
-        handleHeadphoneAction('reset');
+        handleHeadphoneAction('key');
     } else if (key === 'MediaTrackPrevious') {
         e.preventDefault();
-        handleHeadphoneAction('reset');
+        handleHeadphoneAction('key');
     }
 });
 
