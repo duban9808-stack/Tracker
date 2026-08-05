@@ -2659,7 +2659,7 @@ function handleHeadphoneAction(command) {
             app.toggleRestTimer();
             app.showHeadphoneFeedback('playpause');
         } else if (action === 'reset') {
-            app.resetRestTimer();
+            app.restartRestTimer();
             app.showHeadphoneFeedback('reset');
         }
     } finally {
