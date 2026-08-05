@@ -188,7 +188,6 @@
 <base target="_blank">
 <base target="_blank">
 <base target="_blank">
-<base target="_blank">
 </head>
 <body class="min-h-screen pb-28">
 
@@ -2466,108 +2465,109 @@ const app = {
         setTimeout(() => el.remove(), 1200);
     },
 
-    // ========== CONFIGURACIÓN DE GESTOS DE AUDÍFONOS (CORREGIDA) ==========
+    // ========== CONFIGURACIÓN DE GESTOS DE AUDÍFONOS ==========
     openHeadphoneConfigModal() {
         const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || {
-            MediaPlayPause: 'toggle', MediaTrackNext: 'reset', MediaTrackPrevious: 'reset'
+            MediaPlayPause: 'toggle',
+            MediaTrackNext: 'reset',
+            MediaTrackPrevious: 'reset'
         };
-        const model = localStorage.getItem('headphoneModel') || 'generic';
-        const st = HeadphoneControl.status();
+        const selectedModel = localStorage.getItem('headphoneModel') || 'generic';
+        const isMediaSessionActive = !!dummyAudioEl;
 
         const models = [
-            {id:'generic',name:'Genérico / Otros',icon:'fa-headphones'},
-            {id:'airpods',name:'AirPods / AirPods Pro',icon:'fa-apple'},
-            {id:'galaxy',name:'Galaxy Buds',icon:'fa-android'},
-            {id:'sony',name:'Sony WH / WF',icon:'fa-music'},
-            {id:'beats',name:'Beats / Powerbeats',icon:'fa-bolt'}
+            { id: 'generic', name: 'Genérico / Otros', icon: 'fa-headphones', desc: 'La mayoría de audífonos Bluetooth' },
+            { id: 'airpods', name: 'AirPods / AirPods Pro', icon: 'fa-apple', desc: 'Apple AirPods, AirPods Pro, AirPods Max' },
+            { id: 'galaxy', name: 'Galaxy Buds', icon: 'fa-android', desc: 'Samsung Galaxy Buds, Buds Pro, Buds Live' },
+            { id: 'sony', name: 'Sony WH / WF', icon: 'fa-music', desc: 'Sony WH-1000XM, WF-1000XM, etc.' },
+            { id: 'beats', name: 'Beats / Powerbeats', icon: 'fa-bolt', desc: 'Beats Studio, Powerbeats Pro' }
         ];
 
-        // Instrucciones actualizadas con más detalle
-        const inst = {
-            generic:'<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Mantener</b> = Asistente de voz',
-            airpods:'<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Mantener sensor</b> = Asistente',
-            galaxy:'<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Mantener</b> = Bixby',
-            sony:'<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Deslizar</b> = Volumen',
-            beats:'<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Mantener</b> = Asistente'
+        const modelInstructions = {
+            generic: '<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior',
+            airpods: '<b>2 toques</b> (cualquier lado) = Play/Pause<br><b>"Hey Siri"</b> = Control por voz<br><i>Next/Prev desde el teléfono</i>',
+            galaxy: '<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Mantener</b> = Volumen',
+            sony: '<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior<br><b>Personalizable</b> en app Sony',
+            beats: '<b>1 toque</b> = Play/Pause<br><b>2 toques</b> = Siguiente<br><b>3 toques</b> = Anterior'
         };
 
-        const ges = [
-            {k:'MediaPlayPause',l:'Play / Pausa',i:'fa-play',d:'Tocar una vez'},
-            {k:'MediaTrackNext',l:'Siguiente pista',i:'fa-forward',d:'Doble toque'},
-            {k:'MediaTrackPrevious',l:'Pista anterior',i:'fa-backward',d:'Triple toque'}
-        ];
-        const act = [
-            {v:'toggle',l:'Play / Pausa',i:'fa-play'},
-            {v:'reset',l:'Reiniciar',i:'fa-rotate-right'},
-            {v:'none',l:'Nada',i:'fa-ban'}
+        const gestureOptions = [
+            { key: 'MediaPlayPause', label: 'Play / Pausa', icon: 'fa-play', desc: 'Tocar una vez o doble toque' },
+            { key: 'MediaTrackNext', label: 'Siguiente pista', icon: 'fa-forward', desc: 'Doble toque derecho / 2 toques' },
+            { key: 'MediaTrackPrevious', label: 'Pista anterior', icon: 'fa-backward', desc: 'Doble toque izquierdo / 3 toques' }
         ];
 
-        let h = '<h3 class="text-xl font-black text-text mb-1 tracking-tight">Gestos de audífono</h3>';
-        h += '<p class="text-textSecondary text-sm mb-5">Configura los controles de tu audífono Bluetooth</p>';
-        h += '<div class="space-y-3">';
+        const actionOptions = [
+            { value: 'toggle', label: 'Play / Pausa', icon: 'fa-play' },
+            { value: 'reset', label: 'Reiniciar', icon: 'fa-rotate-right' },
+            { value: 'none', label: 'Nada', icon: 'fa-ban' }
+        ];
 
-        // Estado detallado del sistema
-        h += '<div class="card p-4" style="background:'+(st.isActive?'rgba(34,197,94,0.08)':'rgba(245,158,11,0.08)')+';border-color:'+(st.isActive?'rgba(34,197,94,0.2)':'rgba(245,158,11,0.2)')+'">';
-        h += '<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:'+(st.isActive?'#22c55e15':'#f59e0b15')+'">';
-        h += '<i class="fas '+(st.isActive?'fa-headphones':'fa-headphones-simple')+' text-sm" style="color:'+(st.isActive?'#22c55e':'#f59e0b')+'"></i></div>';
-        h += '<div class="flex-1"><div class="text-sm font-bold text-text">'+(st.isActive?'Control activo':'Control inactivo')+'</div>';
-        h += '<div class="text-xs text-textMuted">'+(st.isActive?'Tu audífono puede controlar el cronómetro':'Activa para usar los gestos de tu audífono')+'</div></div></div>';
-
-        // Indicadores técnicos
-        h += '<div class="flex gap-2 mt-3 flex-wrap">';
-        h += '<span class="text-[10px] px-2 py-1 rounded-lg font-bold '+(st.hasMS?'bg-success/10 text-success':'bg-danger/10 text-danger')+'">Media Session API</span>';
-        h += '<span class="text-[10px] px-2 py-1 rounded-lg font-bold '+(st.audioCtxState==='running'?'bg-success/10 text-success':(st.audioCtxState==='suspended'?'bg-warning/10 text-warning':'bg-white/5 text-textMuted'))+'">Audio: '+(st.audioCtxState==='none'?'N/A':st.audioCtxState)+'</span>';
-        h += '<span class="text-[10px] px-2 py-1 rounded-lg font-bold '+(st.mediaPlaying?'bg-success/10 text-success':'bg-danger/10 text-danger')+'">Media Element</span>';
-        h += '</div></div>';
-
-        // Botón principal de activación
-        h += '<button onclick="app.activateHeadphoneControl()" class="touch btn-primary w-full py-3.5 text-sm"><i class="fas fa-power-off mr-2"></i>'+(st.isActive?'Reactivar control':'Activar control')+'</button>';
-        if (st.isActive) {
-            h += '<button onclick="HeadphoneControl.stop();app.openHeadphoneConfigModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors"><i class="fas fa-stop mr-2"></i>Desactivar control</button>';
-        }
-
-        // Nota importante
-        h += '<div class="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">';
-        h += '<div class="flex items-start gap-2"><i class="fas fa-info-circle text-primary text-xs mt-0.5"></i>';
-        h += '<div class="text-xs text-textSecondary font-medium leading-relaxed">';
-        h += 'Para que funcione, mantén esta pantalla visible durante el descanso. Algunos audífonos requieren que la app esté activa. Si no funciona, prueba cerrando otras apps de música.';
-        h += '</div></div></div>';
+        let htmlModal = '<h3 class="text-xl font-black text-text mb-1 tracking-tight">Gestos de audífono</h3>';
+        htmlModal += '<p class="text-textSecondary text-sm mb-5">Selecciona tu modelo y asigna acciones</p>';
+        htmlModal += '<div class="space-y-3">';
 
         // Selector de modelo
-        h += '<div class="pt-2"><label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Modelo de audífono</label>';
-        h += '<select id="headphoneModelSelect" onchange="app.onHeadphoneModelChange()" class="input-field w-full px-4 py-3 text-white font-bold text-sm appearance-none cursor-pointer">';
-        models.forEach(m => h += '<option value="'+m.id+'" '+(model===m.id?'selected':'')+'>'+m.name+'</option>');
-        h += '</select></div>';
+        htmlModal += '<div><label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Modelo de audífono</label>';
+        htmlModal += '<select id="headphoneModelSelect" onchange="app.onHeadphoneModelChange()" class="input-field w-full px-4 py-3 text-white font-bold text-sm appearance-none cursor-pointer">';
+        models.forEach(m => {
+            htmlModal += '<option value="' + m.id + '" ' + (selectedModel === m.id ? 'selected' : '') + '>' + m.name + '</option>';
+        });
+        htmlModal += '</select></div>';
 
         // Instrucciones del modelo
-        h += '<div class="bg-white/3 rounded-xl px-4 py-3"><div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mb-1">Gestos de tu modelo</div>';
-        h += '<div class="text-xs text-textSecondary font-medium leading-relaxed">'+(inst[model]||inst.generic)+'</div></div>';
+        htmlModal += '<div id="modelInstructions" class="bg-white/3 rounded-xl px-4 py-3">';
+        htmlModal += '<div class="text-[10px] font-bold text-textMuted uppercase tracking-wider mb-1">Gestos de tu modelo</div>';
+        htmlModal += '<div class="text-xs text-textSecondary font-medium leading-relaxed">' + (modelInstructions[selectedModel] || modelInstructions.generic) + '</div>';
+        htmlModal += '</div>';
 
-        // Asignación de acciones
-        h += '<div class="pt-2"><label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Asignar acciones al cronómetro</label></div>';
-        ges.forEach(g => {
-            h += '<div class="card p-4"><div class="flex items-center gap-3 mb-3"><div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">';
-            h += '<i class="fas '+g.i+' text-primary text-xs"></i></div><div><div class="text-sm font-bold text-text">'+g.l+'</div>';
-            h += '<div class="text-[11px] text-textMuted">'+g.d+'</div></div></div><div class="grid grid-cols-3 gap-2">';
-            act.forEach(a => {
-                const ck = gestures[g.k]===a.v?'checked':'';
-                const ic = a.v==='none'?'text-textMuted':'text-primary';
-                const lc = a.v==='none'?'text-textMuted':'text-text';
-                h += '<label class="cursor-pointer"><input type="radio" name="gesture_'+g.k+'" value="'+a.v+'" '+ck+' class="hidden peer">';
-                h += '<div class="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-white/5 bg-white/[0.02] peer-checked:border-primary/50 peer-checked:bg-primary/10 transition-all text-center">';
-                h += '<i class="fas '+a.i+' text-xs '+ic+'"></i><span class="text-[10px] font-bold '+lc+'">'+a.l+'</span></div></label>';
+        // Estado de Media Session
+        htmlModal += '<div id="mediaSessionStatus" class="flex items-center gap-3 bg-white/3 rounded-xl px-4 py-3">';
+        htmlModal += '<div class="w-8 h-8 rounded-lg ' + (isMediaSessionActive ? 'bg-success/15' : 'bg-warning/15') + ' flex items-center justify-center">';
+        htmlModal += '<i class="fas ' + (isMediaSessionActive ? 'fa-check text-success' : 'fa-exclamation text-warning') + ' text-xs"></i></div>';
+        htmlModal += '<div class="flex-1"><div class="text-sm font-bold text-text">' + (isMediaSessionActive ? 'Control activado' : 'Control no activado') + '</div>';
+        htmlModal += '<div class="text-xs text-textMuted">' + (isMediaSessionActive ? 'Los gestos de tu audífono funcionan' : 'Toca el botón de abajo para activar') + '</div></div></div>';
+
+        // Botón activar
+        htmlModal += '<button onclick="app.activateHeadphoneControl()" class="touch btn-primary w-full py-3 text-sm">';
+        htmlModal += '<i class="fas fa-power-off mr-2"></i>' + (isMediaSessionActive ? 'Reactivar control' : 'Activar control por audífono') + '</button>';
+
+        // Asignación de gestos
+        htmlModal += '<div class="pt-2"><label class="text-[10px] font-bold text-textMuted uppercase tracking-wider block mb-2">Asignar acciones</label></div>';
+        gestureOptions.forEach(g => {
+            htmlModal += '<div class="card p-4">';
+            htmlModal += '<div class="flex items-center gap-3 mb-3">';
+            htmlModal += '<div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">';
+            htmlModal += '<i class="fas ' + g.icon + ' text-primary text-xs"></i></div>';
+            htmlModal += '<div><div class="text-sm font-bold text-text">' + g.label + '</div>';
+            htmlModal += '<div class="text-[11px] text-textMuted">' + g.desc + '</div></div></div>';
+            htmlModal += '<div class="grid grid-cols-3 gap-2">';
+            actionOptions.forEach(a => {
+                const checked = gestures[g.key] === a.value ? 'checked' : '';
+                const iconColor = a.value === 'none' ? 'text-textMuted' : 'text-primary';
+                const labelColor = a.value === 'none' ? 'text-textMuted' : 'text-text';
+                htmlModal += '<label class="cursor-pointer">';
+                htmlModal += '<input type="radio" name="gesture_' + g.key + '" value="' + a.value + '" ' + checked + ' class="hidden peer">';
+                htmlModal += '<div class="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-white/5 bg-white/[0.02] peer-checked:border-primary/50 peer-checked:bg-primary/10 transition-all text-center">';
+                htmlModal += '<i class="fas ' + a.icon + ' text-xs ' + iconColor + '"></i>';
+                htmlModal += '<span class="text-[10px] font-bold ' + labelColor + '">' + a.label + '</span>';
+                htmlModal += '</div></label>';
             });
-            h += '</div></div>';
+            htmlModal += '</div></div>';
         });
 
-        h += '<button onclick="app.saveHeadphoneConfig()" class="touch btn-primary w-full py-3.5 text-sm"><i class="fas fa-save mr-2"></i>Guardar configuración</button>';
-        h += '<button onclick="app.testHeadphoneGestures()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors"><i class="fas fa-vial mr-2"></i>Probar gestos (simulación)</button>';
-        h += '<button onclick="app.openSoundConfigModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors"><i class="fas fa-arrow-left mr-2"></i>Volver a sonido</button>';
-        h += '</div>';
+        htmlModal += '<button onclick="app.saveHeadphoneConfig()" class="touch btn-primary w-full py-3.5 text-sm">';
+        htmlModal += '<i class="fas fa-save mr-2"></i>Guardar configuración</button>';
+        htmlModal += '<button onclick="app.testHeadphoneGestures()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">';
+        htmlModal += '<i class="fas fa-vial mr-2"></i>Probar gestos</button>';
+        htmlModal += '<button onclick="app.openSoundConfigModal()" class="touch w-full py-3 bg-white/5 hover:bg-white/10 text-text font-bold rounded-xl text-sm transition-colors">';
+        htmlModal += '<i class="fas fa-arrow-left mr-2"></i>Volver a sonido</button>';
+        htmlModal += '</div>';
 
-        document.getElementById('modalContent').innerHTML = h;
+        document.getElementById('modalContent').innerHTML = htmlModal;
         document.getElementById('modalOverlay').classList.remove('hidden');
     },
+
     onHeadphoneModelChange() {
         const model = document.getElementById('headphoneModelSelect')?.value || 'generic';
         localStorage.setItem('headphoneModel', model);
@@ -2575,61 +2575,29 @@ const app = {
     },
 
     activateHeadphoneControl() {
-        // En iOS Safari, el AudioContext requiere interacción del usuario
-        // Este método se llama desde un botón, así que debería funcionar
-        HeadphoneControl.start().then(ok => {
-            if (ok) {
-                this.showToast('Control activado 🎧. Prueba los gestos de tu audífono.');
-            } else {
-                this.showToast('No se pudo activar. Asegúrate de no tener otra app de música abierta.', 'error');
-            }
-            this.openHeadphoneConfigModal();
-        }).catch(err => {
-            console.error('Error activando HeadphoneControl:', err);
-            this.showToast('Error al activar. Intenta recargar la página.', 'error');
-        });
+        startDummyAudio();
+        const ok = setupMediaSession();
+        if (ok) {
+            this.showToast('Control por audífono activado 🎧');
+        } else {
+            this.showToast('Usando modo fallback (teclado)', 'error');
+        }
+        this.openHeadphoneConfigModal();
     },
+
     saveHeadphoneConfig() {
-        const g = {};
-        ['MediaPlayPause','MediaTrackNext','MediaTrackPrevious'].forEach(k => {
-            const s = document.querySelector('input[name="gesture_' + k + '"]:checked');
-            g[k] = s ? s.value : 'none';
+        const gestures = {};
+        ['MediaPlayPause', 'MediaTrackNext', 'MediaTrackPrevious'].forEach(key => {
+            const selected = document.querySelector('input[name="gesture_' + key + '"]:checked');
+            gestures[key] = selected ? selected.value : 'none';
         });
-        localStorage.setItem('headphoneGestures', JSON.stringify(g));
+        localStorage.setItem('headphoneGestures', JSON.stringify(gestures));
         this.showToast('Gestos guardados 🎧');
+        this.openHeadphoneConfigModal();
     },
 
     testHeadphoneGestures() {
-        // Simular cada gesto para que el usuario vea que funciona
-        const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || {
-            MediaPlayPause: 'toggle', MediaTrackNext: 'reset', MediaTrackPrevious: 'reset'
-        };
-
-        let msg = 'Configuración actual: ';
-        const actions = [];
-        if (gestures.MediaPlayPause && gestures.MediaPlayPause !== 'none') {
-            actions.push('Play/Pause → ' + (gestures.MediaPlayPause === 'toggle' ? 'Play/Pausa' : 'Reiniciar'));
-        }
-        if (gestures.MediaTrackNext && gestures.MediaTrackNext !== 'none') {
-            actions.push('Siguiente → ' + (gestures.MediaTrackNext === 'toggle' ? 'Play/Pausa' : 'Reiniciar'));
-        }
-        if (gestures.MediaTrackPrevious && gestures.MediaTrackPrevious !== 'none') {
-            actions.push('Anterior → ' + (gestures.MediaTrackPrevious === 'toggle' ? 'Play/Pausa' : 'Reiniciar'));
-        }
-
-        if (actions.length === 0) {
-            this.showToast('Ningún gesto configurado. Asigna acciones primero.', 'error');
-            return;
-        }
-
-        this.showToast(actions.join(' | '));
-
-        // Simular feedback visual para cada gesto activo
-        setTimeout(() => {
-            if (gestures.MediaPlayPause === 'toggle') {
-                this.showHeadphoneFeedback('playpause');
-            }
-        }, 500);
+        this.showToast('Usa los gestos de tu audífono para probar');
     }
 };
 
@@ -2637,283 +2605,245 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
     if (e.target.id === 'modalOverlay') app.closeModal();
 });
 
-// ========== CONTROL POR AUDÍFONO V4 (CORREGIDO) ==========
-const HeadphoneControl = {
-    mediaEl: null,
-    audioCtx: null,
-    oscillator: null,
-    gainNode: null,
-    isActive: false,
-    debounce: false,
-    keepAliveInterval: null,
-    blobUrl: null,
+// ========== AUDIO DUMMY PARA MEDIA SESSION ==========
+let dummyAudioEl = null;
+let dummyAudioUrl = null;
 
-    async start() {
-        // 1. Crear AudioContext (necesario para mantener la sesión activa en móviles modernos)
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-            try {
-                this.audioCtx = new AudioContext();
-                this.oscillator = this.audioCtx.createOscillator();
-                this.gainNode = this.audioCtx.createGain();
+function createSilentWavBlob() {
+    const sampleRate = 8000;
+    const duration = 2.0; // Más largo para evitar gaps
+    const numSamples = Math.floor(sampleRate * duration);
+    const dataSize = numSamples;
+    const fileSize = 36 + dataSize;
+    const arr = new Uint8Array(fileSize + 8);
+    let p = 0;
+    const writeStr = (s) => { for (let i = 0; i < s.length; i++) arr[p++] = s.charCodeAt(i); };
+    const write32 = (v) => { arr[p++] = v & 0xFF; arr[p++] = (v >> 8) & 0xFF; arr[p++] = (v >> 16) & 0xFF; arr[p++] = (v >> 24) & 0xFF; };
+    const write16 = (v) => { arr[p++] = v & 0xFF; arr[p++] = (v >> 8) & 0xFF; };
+    writeStr('RIFF'); write32(fileSize); writeStr('WAVE');
+    writeStr('fmt '); write32(16); write16(1); write16(1); write32(sampleRate); write32(sampleRate); write16(1); write16(8);
+    writeStr('data'); write32(dataSize);
+    for (let i = 0; i < dataSize; i++) arr[p++] = 0x80;
+    return new Blob([arr], { type: 'audio/wav' });
+}
 
-                // Frecuencia 1Hz (casi inaudible pero el sistema lo detecta como audio activo)
-                this.oscillator.type = 'sine';
-                this.oscillator.frequency.setValueAtTime(1, this.audioCtx.currentTime);
+function ensureDummyAudio() {
+    if (dummyAudioEl) return Promise.resolve(dummyAudioEl);
+    const blob = createSilentWavBlob();
+    dummyAudioUrl = URL.createObjectURL(blob);
+    dummyAudioEl = new Audio(dummyAudioUrl);
+    dummyAudioEl.loop = true;
+    dummyAudioEl.volume = 0.001; // Casi inaudible pero suficiente para mantener la sesión
+    dummyAudioEl.playsInline = true; // iOS
+    return dummyAudioEl.play().then(() => {
+        console.log('[Headphone] Audio dummy iniciado');
+        return dummyAudioEl;
+    }).catch(err => {
+        console.warn('[Headphone] No se pudo iniciar audio automáticamente:', err);
+        dummyAudioEl = null;
+        throw err;
+    });
+}
 
-                // Volumen muy bajo pero no cero (algunos sistemas ignoran volumen 0)
-                this.gainNode.gain.setValueAtTime(0.01, this.audioCtx.currentTime);
+function resumeDummyAudioIfNeeded() {
+    if (!dummyAudioEl) return ensureDummyAudio();
+    if (dummyAudioEl.paused) {
+        return dummyAudioEl.play().catch(() => {});
+    }
+    return Promise.resolve();
+}
 
-                this.oscillator.connect(this.gainNode);
-                this.gainNode.connect(this.audioCtx.destination);
+function stopDummyAudio() {
+    if (dummyAudioEl) {
+        dummyAudioEl.pause();
+        dummyAudioEl = null;
+    }
+    if (dummyAudioUrl) {
+        URL.revokeObjectURL(dummyAudioUrl);
+        dummyAudioUrl = null;
+    }
+}
 
-                if (this.audioCtx.state === 'suspended') {
-                    await this.audioCtx.resume();
-                }
-                this.oscillator.start();
-            } catch (e) {
-                console.warn('AudioContext no disponible:', e);
-            }
-        }
+// ========== MEDIA SESSION API + GESTOS DE AUDÍFONOS ==========
+let headphoneDebounce = false;
+let mediaSessionInitialized = false;
 
-        // 2. Crear elemento audio como respaldo adicional
-        if (!this.mediaEl) {
-            this.mediaEl = document.createElement('audio');
-            this.mediaEl.loop = true;
-            this.mediaEl.volume = 0.05; // Volumen suficiente para que el sistema no lo ignore
-            this.mediaEl.setAttribute('playsinline', '');
-            this.mediaEl.setAttribute('webkit-playsinline', '');
-            const wav = this.silentWav();
-            this.blobUrl = URL.createObjectURL(wav);
-            this.mediaEl.src = this.blobUrl;
-            document.body.appendChild(this.mediaEl);
-        }
+function handleHeadphoneAction(action) {
+    if (headphoneDebounce) return;
+    headphoneDebounce = true;
 
-        try {
-            await this.mediaEl.play();
-        } catch (e) {
-            console.warn('Audio element play falló:', e);
-            // No retornamos false aquí porque el AudioContext puede ser suficiente
-        }
+    // Asegurar que el audio siga vivo
+    resumeDummyAudioIfNeeded();
 
-        this.isActive = true;
-        this.setupHandlers();
-        this.startKeepAlive();
+    if (action === 'toggle') {
+        app.toggleRestTimer();
+        app.showHeadphoneFeedback('playpause');
+    } else if (action === 'reset') {
+        app.resetRestTimer();
+        app.showHeadphoneFeedback('reset');
+    }
+    setTimeout(() => headphoneDebounce = false, 500);
+}
 
-        return true;
-    },
+function updateMediaSessionPlaybackState() {
+    if (!('mediaSession' in navigator)) return;
+    // Siempre reportar "playing" para que el OS mantenga la sesión activa
+    navigator.mediaSession.playbackState = 'playing';
+}
 
-    stop() {
-        this.isActive = false;
+function setupMediaSession() {
+    if (!('mediaSession' in navigator)) return false;
+    if (mediaSessionInitialized) return true;
 
-        if (this.keepAliveInterval) {
-            clearInterval(this.keepAliveInterval);
-            this.keepAliveInterval = null;
-        }
-
-        if (this.oscillator) {
-            try { this.oscillator.stop(); } catch(e) {}
-            this.oscillator = null;
-        }
-        if (this.audioCtx) {
-            try { this.audioCtx.close(); } catch(e) {}
-            this.audioCtx = null;
-        }
-        if (this.mediaEl) {
-            this.mediaEl.pause();
-            this.mediaEl.src = '';
-            if (this.blobUrl) {
-                URL.revokeObjectURL(this.blobUrl);
-                this.blobUrl = null;
-            }
-            if (this.mediaEl.parentNode) {
-                this.mediaEl.parentNode.removeChild(this.mediaEl);
-            }
-            this.mediaEl = null;
-        }
-
-        // Limpiar handlers de mediaSession
-        if ('mediaSession' in navigator) {
-            ['play','pause','stop','previoustrack','nexttrack','seekbackward','seekforward'].forEach(action => {
-                try {
-                    navigator.mediaSession.setActionHandler(action, null);
-                } catch(e) {}
-            });
-        }
-    },
-
-    silentWav() {
-        const sr = 44100, dur = 2, samples = sr * dur;
-        const ds = samples * 2, fs = 36 + ds;
-        const buf = new ArrayBuffer(fs + 8);
-        const v = new DataView(buf);
-        let p = 0;
-        const w = (s) => { for (let c of s) v.setUint8(p++, c.charCodeAt(0)); };
-        const u16 = (x) => { v.setUint16(p, x, true); p += 2; };
-        const u32 = (x) => { v.setUint32(p, x, true); p += 4; };
-        w('RIFF'); u32(fs); w('WAVE');
-        w('fmt '); u32(16); u16(1); u16(1); u32(sr); u32(sr * 2); u16(2); u16(16);
-        w('data'); u32(ds);
-        for (let i = 0; i < samples; i++) { v.setInt16(p, 0, true); p += 2; }
-        return new Blob([buf], { type: 'audio/wav' });
-    },
-
-    startKeepAlive() {
-        // Reanudar audio context y media element periódicamente
-        this.keepAliveInterval = setInterval(() => {
-            if (!this.isActive) return;
-
-            // Reanudar AudioContext si se suspendió
-            if (this.audioCtx && this.audioCtx.state === 'suspended') {
-                this.audioCtx.resume().catch(() => {});
-            }
-
-            // Reanudar media element si se pausó
-            if (this.mediaEl && this.mediaEl.paused) {
-                this.mediaEl.play().catch(() => {});
-            }
-
-            // Mantener playbackState como playing
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.playbackState = 'playing';
-            }
-        }, 2000);
-    },
-
-    setupHandlers() {
-        if (!('mediaSession' in navigator)) return;
-
-        const g = (k) => {
-            const cfg = JSON.parse(localStorage.getItem('headphoneGestures')) || {};
-            return cfg[k] || (k === 'MediaPlayPause' ? 'toggle' : 'reset');
-        };
-
-        const run = (action) => {
-            if (this.debounce) return;
-            this.debounce = true;
-            if (action === 'toggle') { 
-                app.toggleRestTimer(); 
-                app.showHeadphoneFeedback('playpause'); 
-            } else if (action === 'reset') { 
-                app.resetRestTimer(); 
-                app.showHeadphoneFeedback('reset'); 
-            }
-            setTimeout(() => this.debounce = false, 600);
-        };
-
-        // Mapeo completo de todos los posibles handlers
-        const handlerMap = {
-            'play': () => run(g('MediaPlayPause')),
-            'pause': () => run(g('MediaPlayPause')),
-            'stop': () => run(g('MediaPlayPause')),
-            'previoustrack': () => run(g('MediaTrackPrevious')),
-            'nexttrack': () => run(g('MediaTrackNext')),
-            'seekbackward': () => run(g('MediaTrackPrevious')),
-            'seekforward': () => run(g('MediaTrackNext'))
-        };
-
-        Object.keys(handlerMap).forEach(action => {
-            try {
-                navigator.mediaSession.setActionHandler(action, handlerMap[action]);
-            } catch(e) {
-                // Algunos navegadores no soportan todos los handlers
-            }
+    try {
+        // Establecer metadata para que el OS reconozca la sesión
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: 'Tracker Fuerza',
+            artist: 'Cronómetro de descanso',
+            album: 'Entrenamiento',
+            artwork: [
+                { src: '', sizes: '96x96', type: 'image/png' }
+            ]
         });
 
-        try {
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: 'Descanso',
-                artist: 'Tracker Fuerza',
-                album: 'Entrenamiento',
-                artwork: [
-                    { src: '', sizes: '96x96', type: 'image/png' }
-                ]
-            });
-        } catch(e) {}
-
-        navigator.mediaSession.playbackState = 'playing';
-    },
-
-    status() {
-        return {
-            isActive: this.isActive,
-            audioCtxState: this.audioCtx ? this.audioCtx.state : 'none',
-            mediaPlaying: this.mediaEl ? !this.mediaEl.paused : false,
-            hasMS: 'mediaSession' in navigator
+        const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || {
+            MediaPlayPause: 'toggle',
+            MediaTrackNext: 'reset',
+            MediaTrackPrevious: 'reset'
         };
-    }
-};
 
-// Fallback de teclado mejorado para audífonos Bluetooth
+        // Play
+        navigator.mediaSession.setActionHandler('play', () => {
+            const action = gestures.MediaPlayPause || 'toggle';
+            if (action !== 'none') handleHeadphoneAction(action);
+            updateMediaSessionPlaybackState();
+        });
+
+        // Pause
+        navigator.mediaSession.setActionHandler('pause', () => {
+            const action = gestures.MediaPlayPause || 'toggle';
+            if (action !== 'none') handleHeadphoneAction(action);
+            updateMediaSessionPlaybackState();
+        });
+
+        // Next track
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+            const action = gestures.MediaTrackNext || 'reset';
+            if (action !== 'none') handleHeadphoneAction(action);
+        });
+
+        // Previous track
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+            const action = gestures.MediaTrackPrevious || 'reset';
+            if (action !== 'none') handleHeadphoneAction(action);
+        });
+
+        // Seek forward/backward (algunos audífonos los usan para next/prev)
+        try {
+            navigator.mediaSession.setActionHandler('seekforward', () => {
+                const action = gestures.MediaTrackNext || 'reset';
+                if (action !== 'none') handleHeadphoneAction(action);
+            });
+            navigator.mediaSession.setActionHandler('seekbackward', () => {
+                const action = gestures.MediaTrackPrevious || 'reset';
+                if (action !== 'none') handleHeadphoneAction(action);
+            });
+        } catch (e) {}
+
+        // Stop (algunos audífonos envían stop en lugar de pause)
+        try {
+            navigator.mediaSession.setActionHandler('stop', () => {
+                const action = gestures.MediaPlayPause || 'toggle';
+                if (action !== 'none') handleHeadphoneAction(action);
+                updateMediaSessionPlaybackState();
+            });
+        } catch (e) {}
+
+        updateMediaSessionPlaybackState();
+        mediaSessionInitialized = true;
+        console.log('[Headphone] Media Session configurada');
+        return true;
+    } catch (e) {
+        console.error('[Headphone] Error Media Session:', e);
+        return false;
+    }
+}
+
+// ========== INICIALIZACIÓN AUTOMÁTICA TRAS INTERACCIÓN DEL USUARIO ==========
+function initHeadphoneControl() {
+    // Intentar iniciar audio dummy y configurar Media Session
+    ensureDummyAudio().then(() => {
+        setupMediaSession();
+    }).catch(() => {
+        // Si falla, intentaremos de nuevo en la siguiente interacción
+    });
+}
+
+// Escuchar la primera interacción del usuario para iniciar el audio
+// (necesario por políticas de autoplay de los navegadores)
+let userInteracted = false;
+function onUserInteraction() {
+    if (userInteracted) return;
+    userInteracted = true;
+    initHeadphoneControl();
+
+    // En iOS, el audio se suspende al bloquear pantalla.
+    // Reanudamos cuando la app vuelve a primer plano.
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            setTimeout(() => {
+                resumeDummyAudioIfNeeded();
+                updateMediaSessionPlaybackState();
+            }, 300);
+        }
+    });
+}
+
+// Registrar listeners de interacción (solo una vez)
+['click', 'touchstart', 'keydown'].forEach(evt => {
+    document.addEventListener(evt, onUserInteraction, { once: true, passive: true });
+});
+
+// ========== FALLBACK DE TECLADO ==========
 document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    // Solo procesar si estamos en la vista de entrenamiento
+    if (app.currentView !== 'workout') return;
+    if (headphoneDebounce) return;
 
-    // Mapeo completo de códigos de audífono (tanto e.code como e.key)
-    const codeMap = {
-        'MediaPlayPause': 'MediaPlayPause',
-        'MediaTrackNext': 'MediaTrackNext',
-        'MediaTrackPrevious': 'MediaTrackPrevious',
-        'MediaPlay': 'MediaPlayPause',
-        'MediaPause': 'MediaPlayPause',
-        'MediaStop': 'MediaPlayPause',
-        'MediaFastForward': 'MediaTrackNext',
-        'MediaRewind': 'MediaTrackPrevious'
-    };
-    const keyMap = {
-        'MediaPlayPause': 'MediaPlayPause',
-        'MediaTrackNext': 'MediaTrackNext',
-        'MediaTrackPrevious': 'MediaTrackPrevious',
-        'Play': 'MediaPlayPause',
-        'Pause': 'MediaPlayPause',
-        'Stop': 'MediaPlayPause'
+    const key = e.code || e.key;
+    const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || {
+        MediaPlayPause: 'toggle',
+        MediaTrackNext: 'reset',
+        MediaTrackPrevious: 'reset'
     };
 
-    const k = codeMap[e.code] || keyMap[e.key];
-    if (!k) return;
+    let action = null;
+    if (key === 'MediaPlayPause' || key === 'Space' || key === 'Enter') {
+        action = gestures.MediaPlayPause;
+    } else if (key === 'MediaTrackNext' || key === 'ArrowRight') {
+        action = gestures.MediaTrackNext;
+    } else if (key === 'MediaTrackPrevious' || key === 'ArrowLeft') {
+        action = gestures.MediaTrackPrevious;
+    }
 
-    const cfg = JSON.parse(localStorage.getItem('headphoneGestures')) || {};
-    const a = cfg[k] || (k === 'MediaPlayPause' ? 'toggle' : 'reset');
-    if (!a || a === 'none') return;
-
+    if (!action || action === 'none') return;
     e.preventDefault();
-    e.stopPropagation();
-
-    if (HeadphoneControl.debounce) return;
-    HeadphoneControl.debounce = true;
-
-    if (a === 'toggle') { 
-        app.toggleRestTimer(); 
-        app.showHeadphoneFeedback('playpause'); 
-    } else if (a === 'reset') { 
-        app.resetRestTimer(); 
-        app.showHeadphoneFeedback('reset'); 
-    }
-    setTimeout(() => HeadphoneControl.debounce = false, 600);
+    handleHeadphoneAction(action);
 });
 
-// Reanudar AudioContext en iOS/Android cuando hay interacción del usuario
-const resumeAudioContext = () => {
-    if (HeadphoneControl.audioCtx && HeadphoneControl.audioCtx.state === 'suspended') {
-        HeadphoneControl.audioCtx.resume().catch(() => {});
+app.activateHeadphoneControl = function() {
+    initHeadphoneControl();
+    const ok = setupMediaSession();
+    if (ok) {
+        this.showToast('Control por audífono activado 🎧');
+    } else {
+        this.showToast('Media Session no disponible en este navegador', 'error');
     }
+    this.openHeadphoneConfigModal();
 };
-document.addEventListener('touchstart', resumeAudioContext, { passive: true });
-document.addEventListener('click', resumeAudioContext);
-
-// Reanudar cuando la app vuelve a primer plano
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && HeadphoneControl.isActive) {
-        resumeAudioContext();
-        if (HeadphoneControl.mediaEl && HeadphoneControl.mediaEl.paused) {
-            HeadphoneControl.mediaEl.play().catch(() => {});
-        }
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = 'playing';
-        }
-    }
-});
 
 app.init();
+
 </script>
 </body>
 </html>
