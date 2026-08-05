@@ -238,7 +238,7 @@
                     <button onclick="app.toggleRestTimer()" id="restTimerToggle" class="touch w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-textMuted hover:text-text transition-colors">
                         <i class="fas fa-play text-[10px]" id="restTimerIcon"></i>
                     </button>
-                    <button onclick="app.resetRestTimer()" class="touch w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-textMuted hover:text-text transition-colors">
+                    <button onclick="app.restartRestTimer()" class="touch w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-textMuted hover:text-text transition-colors">
                         <i class="fas fa-rotate-right text-[10px]"></i>
                     </button>
                     <button onclick="app.openSoundConfigModal()" class="touch w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-textMuted hover:text-text transition-colors">
@@ -443,6 +443,11 @@ const app = {
         this.restTimer.startTime = null;
         this.restTimer.soundPlayed = false;
         this.updateRestTimerDisplay();
+    },
+
+    restartRestTimer() {
+        this.resetRestTimer();
+        this.startRestTimer();
     },
 
     formatRestTime(ms) {
@@ -1081,8 +1086,7 @@ const app = {
         const rInput = document.getElementById('inputReps');
         if (rInput) { rInput.value = ''; }
         // Reiniciar e iniciar cronómetro de descanso
-        this.resetRestTimer();
-        this.startRestTimer();
+        this.restartRestTimer();
     },
 
     deleteEntry(tempId) {
