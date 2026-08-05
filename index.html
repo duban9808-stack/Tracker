@@ -2641,11 +2641,14 @@ function createSilentWavBlob(durationSec = 6.0) {
 }
 
 function handleHeadphoneAction(command) {
+    console.log('[Tracker] Comando recibido:', command);
     if (headphoneDebounce) return;
     headphoneDebounce = true;
     try {
         const cfg = getBtConfig();
+        console.log('[Tracker] Config:', JSON.stringify(cfg));
         const action = cfg[command]?.action || 'none';
+        console.log('[Tracker] Acción mapeada:', action, 'para comando:', command);
         lastDetectedCommand = command;
         if (learningMode) {
             app.showToast('Detectado: ' + (cfg[command]?.label || command), 'success');
@@ -2659,8 +2662,11 @@ function handleHeadphoneAction(command) {
             app.toggleRestTimer();
             app.showHeadphoneFeedback('playpause');
         } else if (action === 'reset') {
+            console.log('[Tracker] Ejecutando restartRestTimer');
             app.restartRestTimer();
             app.showHeadphoneFeedback('reset');
+        } else {
+            console.log('[Tracker] Acción = none, no se hace nada');
         }
     } finally {
         setTimeout(() => { headphoneDebounce = false; }, 400);
@@ -2683,6 +2689,12 @@ function setupMediaSessionHandlers() {
         navigator.mediaSession.setActionHandler('previoustrack', () => {
             handleHeadphoneAction('previous');
         });
+        navigator.mediaSession.setActionHandler('seekbackward', () => {
+            handleHeadphoneAction('previous');
+        });
+        navigator.mediaSession.setActionHandler('seekforward', () => {
+            handleHeadphoneAction('next');
+        });
         navigator.mediaSession.metadata = new MediaMetadata({
             title: 'Tracker Fuerza',
             artist: 'Cronómetro de descanso',
@@ -2699,13 +2711,26 @@ function setupMediaSessionHandlers() {
 }
 
 function activateBluetoothControls() {
-    if (mediaSessionActive) return Promise.resolve(true);
     mediaAudioEl = document.getElementById('mediaAudio');
     if (!mediaAudioEl) return Promise.resolve(false);
     if (!mediaAudioEl.src) {
         const blob = createSilentWavBlob(6.0);
         mediaAudioEl.src = URL.createObjectURL(blob);
     }
+    // Si ya está activo pero el audio se pausó (ahorro de batería, etc.), reanudar
+    if (mediaSessionActive && mediaAudioEl.paused) {
+        console.log('[Tracker] Reanudando audio pausado...');
+        return mediaAudioEl.play().then(() => {
+            setupMediaSessionHandlers();
+            console.log('[Tracker] Audio reanudado, handlers re-registrados');
+            return true;
+        }).catch(() => false);
+    }
+    // Si ya está activo y el audio sigue reproduciéndose, todo OK
+    if (mediaSessionActive && !mediaAudioEl.paused) {
+        return Promise.resolve(true);
+    }
+    // Primera activación
     return mediaAudioEl.play().then(() => {
         mediaSessionActive = true;
         setupMediaSessionHandlers();
@@ -2728,19 +2753,30 @@ function stopBluetoothControls() {
     }
 }
 
-// Fallback: algunos audífonos envían key events
+// Fallback: algunos audífonos envían key events en lugar de Media Session
 document.addEventListener('keydown', (e) => {
     if (headphoneDebounce) return;
     const key = e.key || e.code;
     if (key === 'MediaPlayPause' || key === 'MediaPlay' || key === 'MediaPause' || key === 'MediaStop') {
         e.preventDefault();
-        handleHeadphoneAction('key');
+        handleHeadphoneAction('play');
     } else if (key === 'MediaTrackNext') {
         e.preventDefault();
-        handleHeadphoneAction('key');
+        handleHeadphoneAction('next');
     } else if (key === 'MediaTrackPrevious') {
         e.preventDefault();
-        handleHeadphoneAction('key');
+        handleHeadphoneAction('previous');
+    }
+});
+
+
+// Reanudar audio si el navegador lo pausó al cambiar de pestaña/bloquear
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && mediaAudioEl && mediaAudioEl.paused) {
+        mediaAudioEl.play().catch(() => {});
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'playing';
+        }
     }
 });
 
