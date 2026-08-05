@@ -987,12 +987,6 @@ const app = {
         `;
         // Actualizar display del cronómetro si está activo
         setTimeout(() => this.updateRestTimerDisplay(), 50);
-
-        // AUTO-ACTIVAR: iniciar sesión de media para audífonos Bluetooth
-        if (this.currentWorkout && !this.currentWorkout.isRest) {
-            startDummyAudio();
-            setupMediaSession();
-        }
     },
 
     showDatePickerModal(categoryId) {
@@ -1035,6 +1029,9 @@ const app = {
             isRest: isRest
         };
         Storage.setCurrentWorkout(this.currentWorkout);
+        if (!isRest) {
+            activateBluetoothControls();
+        }
         this.showView('workout');
     },
 
@@ -1061,6 +1058,7 @@ const app = {
             this.showToast('Ingresa peso y repeticiones', 'error');
             return;
         }
+        activateBluetoothControls();
         const currentExerciseId = this.currentWorkout.currentExerciseId;
         const seriesCount = this.currentWorkout.entries.filter(e => e.exerciseId === currentExerciseId).length;
         this.currentWorkout.entries.push({
@@ -1162,9 +1160,7 @@ const app = {
     },
 
     finishWorkout() {
-        // Detener sesión de media al finalizar
-        stopDummyAudio();
-
+        stopBluetoothControls();
         if (this.currentWorkout.entries.length === 0 && !this.currentWorkout.isRest) {
             this.showToast('Agrega al menos una serie', 'error');
             return;
@@ -2359,7 +2355,7 @@ const app = {
         if (this.currentWorkout && this.currentWorkout.entries.length > 0) {
             if (!confirm('Tienes un entrenamiento en progreso. ¿Descartarlo y empezar uno nuevo?')) return;
         }
-        stopDummyAudio();
+        stopBluetoothControls();
         Storage.clearCurrentWorkout();
         this.currentWorkout = null;
         this.resetRestTimer();
@@ -2483,7 +2479,7 @@ const app = {
             MediaTrackPrevious: 'reset'
         };
         const selectedModel = localStorage.getItem('headphoneModel') || 'generic';
-        const isMediaSessionActive = !!dummyAudioEl;
+        const isMediaSessionActive = mediaSessionActive;
 
         const models = [
             { id: 'generic', name: 'Genérico / Otros', icon: 'fa-headphones', desc: 'La mayoría de audífonos Bluetooth' },
@@ -2585,14 +2581,14 @@ const app = {
     },
 
     activateHeadphoneControl() {
-        startDummyAudio();
-        const ok = setupMediaSession();
-        if (ok) {
-            this.showToast('Control por audífono activado 🎧');
-        } else {
-            this.showToast('Usando modo fallback (teclado)', 'error');
-        }
-        this.openHeadphoneConfigModal();
+        activateBluetoothControls().then(ok => {
+            if (ok) {
+                this.showToast('Control por audífono activado 🎧');
+            } else {
+                this.showToast('Toca la pantalla primero, luego activa', 'error');
+            }
+            this.openHeadphoneConfigModal();
+        });
     },
 
     saveHeadphoneConfig() {
@@ -2615,13 +2611,23 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
     if (e.target.id === 'modalOverlay') app.closeModal();
 });
 
-// ========== AUDIO DUMMY + MEDIA SESSION ==========
-let dummyAudioEl = null;
+// ========== CAPTURA DE CONTROLES BLUETOOTH (Android Chrome) ==========
+// En Android Chrome, Media Session API SOLO funciona con un <audio> element
+// REAL en el DOM, duración >= 5s, e iniciado por GESTO DE USUARIO.
+// Los audífonos Xiaomi/Redmi envían AVRCP -> Android -> Chrome:
+//   1 toque  = play/pause   -> toggle cronómetro
+//   2 toques = nexttrack    -> reiniciar cronómetro
+//   3 toques = previoustrack -> reiniciar cronómetro
+//   mantener = depende de config en app Xiaomi Earbuds
+// ======================================================================
 
-function createSilentWavBlob() {
+let mediaAudioEl = null;
+let mediaSessionActive = false;
+let headphoneDebounce = false;
+
+function createSilentWavBlob(durationSec = 6.0) {
     const sampleRate = 8000;
-    const duration = 2.0; // Más largo para evitar cortes
-    const numSamples = Math.floor(sampleRate * duration);
+    const numSamples = Math.floor(sampleRate * durationSec);
     const dataSize = numSamples;
     const fileSize = 36 + dataSize;
     const arr = new Uint8Array(fileSize + 8);
@@ -2636,49 +2642,6 @@ function createSilentWavBlob() {
     return new Blob([arr], { type: 'audio/wav' });
 }
 
-function startDummyAudio() {
-    // Si existe y está pausado, reanudar
-    if (dummyAudioEl) {
-        if (dummyAudioEl.paused) {
-            dummyAudioEl.play().catch(() => {});
-        }
-        return;
-    }
-
-    const blob = createSilentWavBlob();
-    const url = URL.createObjectURL(blob);
-    dummyAudioEl = new Audio(url);
-    dummyAudioEl.loop = true;
-    dummyAudioEl.volume = 0.01;
-    dummyAudioEl.play().catch(() => {});
-
-    // CRÍTICO: Metadata para que el SO/navegador reconozca la sesión
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: 'Tracker Fuerza',
-            artist: 'Cronómetro de descanso activo',
-            album: 'Entrenamiento',
-            artwork: [
-                { src: 'https://cdn-icons-png.flaticon.com/512/2548/2548530.png', sizes: '512x512', type: 'image/png' }
-            ]
-        });
-        navigator.mediaSession.playbackState = 'playing';
-    }
-}
-
-function stopDummyAudio() {
-    if (dummyAudioEl) {
-        dummyAudioEl.pause();
-        dummyAudioEl = null;
-    }
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'none';
-    }
-}
-
-// ========== MEDIA SESSION API + GESTOS DE AUDÍFONOS ==========
-let headphoneDebounce = false;
-
 function handleHeadphoneAction(action) {
     if (headphoneDebounce) return;
     headphoneDebounce = true;
@@ -2691,94 +2654,91 @@ function handleHeadphoneAction(action) {
             app.showHeadphoneFeedback('reset');
         }
     } finally {
-        setTimeout(() => { headphoneDebounce = false; }, 500);
+        setTimeout(() => { headphoneDebounce = false; }, 400);
     }
 }
 
-function setupMediaSession() {
+function setupMediaSessionHandlers() {
     if (!('mediaSession' in navigator)) return false;
     try {
-        // Play: reanudar audio + ejecutar acción
         navigator.mediaSession.setActionHandler('play', () => {
-            if (dummyAudioEl && dummyAudioEl.paused) {
-                dummyAudioEl.play().catch(() => {});
-            }
-            navigator.mediaSession.playbackState = 'playing';
-            const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || { MediaPlayPause: 'toggle' };
-            const mapped = gestures.MediaPlayPause || 'toggle';
-            if (mapped !== 'none') handleHeadphoneAction(mapped);
+            if (mediaAudioEl && mediaAudioEl.paused) mediaAudioEl.play().catch(()=>{});
+            handleHeadphoneAction('toggle');
         });
-
-        // Pause: pausar audio dummy + ejecutar acción
-        // Esto alterna el estado para que el SO envíe "play" en el siguiente toque
         navigator.mediaSession.setActionHandler('pause', () => {
-            if (dummyAudioEl && !dummyAudioEl.paused) {
-                dummyAudioEl.pause();
-            }
-            navigator.mediaSession.playbackState = 'paused';
-            const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || { MediaPlayPause: 'toggle' };
-            const mapped = gestures.MediaPlayPause || 'toggle';
-            if (mapped !== 'none') handleHeadphoneAction(mapped);
+            handleHeadphoneAction('toggle');
         });
-
-        // Next track
         navigator.mediaSession.setActionHandler('nexttrack', () => {
-            const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || { MediaTrackNext: 'reset' };
-            const mapped = gestures.MediaTrackNext || 'reset';
-            if (mapped !== 'none') handleHeadphoneAction(mapped);
+            handleHeadphoneAction('reset');
         });
-
-        // Previous track
         navigator.mediaSession.setActionHandler('previoustrack', () => {
-            const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || { MediaTrackPrevious: 'reset' };
-            const mapped = gestures.MediaTrackPrevious || 'reset';
-            if (mapped !== 'none') handleHeadphoneAction(mapped);
+            handleHeadphoneAction('reset');
         });
-
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: 'Tracker Fuerza',
+            artist: 'Cronómetro de descanso',
+            album: 'Entrenamiento',
+            artwork: [
+                { src: 'https://cdn-icons-png.flaticon.com/512/2548/2548530.png', sizes: '512x512', type: 'image/png' }
+            ]
+        });
         return true;
     } catch (e) {
-        console.error('Media Session setup error:', e);
+        console.error('Media Session handlers error:', e);
         return false;
     }
 }
 
-// Reanudar audio si el navegador lo pausó al cambiar de pestaña/bloquear
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && dummyAudioEl && dummyAudioEl.paused) {
-        dummyAudioEl.play().catch(() => {});
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = 'playing';
-        }
+// ACTIVAR: debe llamarse DENTRO de un gesto de usuario (click/touch)
+// Chrome Android bloquea autoplay sin interacción previa del usuario.
+function activateBluetoothControls() {
+    if (mediaSessionActive) return Promise.resolve(true);
+    mediaAudioEl = document.getElementById('mediaAudio');
+    if (!mediaAudioEl) return Promise.resolve(false);
+    if (!mediaAudioEl.src) {
+        const blob = createSilentWavBlob(6.0);
+        mediaAudioEl.src = URL.createObjectURL(blob);
     }
-});
+    return mediaAudioEl.play().then(() => {
+        mediaSessionActive = true;
+        setupMediaSessionHandlers();
+        console.log('[Tracker] Bluetooth controls activados');
+        return true;
+    }).catch(err => {
+        console.warn('[Tracker] No se pudo activar audio (requiere gesto de usuario):', err);
+        return false;
+    });
+}
 
-// Fallback de teclado para navegadores sin Media Session
+function stopBluetoothControls() {
+    if (mediaAudioEl) {
+        mediaAudioEl.pause();
+        mediaAudioEl.currentTime = 0;
+    }
+    mediaSessionActive = false;
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+    }
+}
+
+// Fallback: algunos audífonos envían key events
 document.addEventListener('keydown', (e) => {
     if (headphoneDebounce) return;
-    // Mapear tanto e.key como e.code para máxima compatibilidad
-    const keyMap = {
-        'MediaPlayPause': 'MediaPlayPause',
-        'MediaTrackNext': 'MediaTrackNext', 
-        'MediaTrackPrevious': 'MediaTrackPrevious',
-        'MediaPlay': 'MediaPlayPause',
-        'MediaPause': 'MediaPlayPause',
-        'MediaStop': 'MediaPlayPause'
-    };
-    const key = keyMap[e.key] || keyMap[e.code];
-    if (!key) return;
-
-    const gestures = JSON.parse(localStorage.getItem('headphoneGestures')) || {
-        MediaPlayPause: 'toggle',
-        MediaTrackNext: 'reset',
-        MediaTrackPrevious: 'reset'
-    };
-    const action = gestures[key];
-    if (!action || action === 'none') return;
-    e.preventDefault();
-    handleHeadphoneAction(action);
+    const key = e.key || e.code;
+    if (key === 'MediaPlayPause' || key === 'MediaPlay' || key === 'MediaPause' || key === 'MediaStop') {
+        e.preventDefault();
+        handleHeadphoneAction('toggle');
+    } else if (key === 'MediaTrackNext') {
+        e.preventDefault();
+        handleHeadphoneAction('reset');
+    } else if (key === 'MediaTrackPrevious') {
+        e.preventDefault();
+        handleHeadphoneAction('reset');
+    }
 });
 
 app.init();
 </script>
+    <audio id="mediaAudio" loop playsinline style="display:none;" preload="auto"></audio>
 </body>
 </html>
