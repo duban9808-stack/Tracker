@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0a0f1a">
+    <meta name="theme-color" content="#0D0C0B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tracker">
@@ -12,26 +12,27 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], display: ['"Barlow Condensed"', 'sans-serif'] },
                     colors: {
-                        bg: '#0a0f1a',
-                        surface: '#111827',
-                        surfaceHover: '#1a2236',
+                        bg: '#0D0C0B',
+                        surface: '#171513',
+                        surfaceHover: '#221F1C',
                         border: 'rgba(255,255,255,0.06)',
                         borderHover: 'rgba(255,255,255,0.12)',
-                        primary: '#3b82f6',
-                        primaryHover: '#2563eb',
-                        success: '#22c55e',
-                        warning: '#f59e0b',
-                        danger: '#ef4444',
-                        text: '#f9fafb',
-                        textSecondary: '#9ca3af',
-                        textMuted: '#6b7280',
+                        primary: '#FF5A1F',
+                        primaryHover: '#E1470E',
+                        info: '#4C8DFF',
+                        success: '#C6F135',
+                        warning: '#FFB020',
+                        danger: '#FF4B4B',
+                        text: '#F5F2ED',
+                        textSecondary: '#A8A29B',
+                        textMuted: '#6F6A63',
                     }
                 }
             }
@@ -39,7 +40,27 @@
     </script>
     <style>
         * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: #0a0f1a; color: #f9fafb; overscroll-behavior-y: none; }
+        body {
+            background-color: #0D0C0B;
+            background-image:
+                radial-gradient(ellipse 900px 500px at 15% -10%, rgba(255,90,31,0.10), transparent 60%),
+                radial-gradient(ellipse 700px 500px at 100% 15%, rgba(198,241,53,0.05), transparent 55%);
+            background-attachment: fixed;
+            color: #F5F2ED;
+            overscroll-behavior-y: none;
+        }
+
+        /* Display type: used with restraint for big stat numbers and headline weight (font-black) */
+        .font-black {
+            font-family: 'Barlow Condensed', sans-serif !important;
+            letter-spacing: 0.01em;
+            font-weight: 800 !important;
+        }
+        .font-black i.fas, .font-black i.far, .font-black i.fa,
+        .font-black i[class*="fa-"] {
+            font-family: "Font Awesome 6 Free" !important;
+            letter-spacing: normal;
+        }
 
         /* Scrollbar hide */
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -60,13 +81,14 @@
         .stagger-5 { animation-delay: 0.25s; }
 
         /* Glass nav */
-        .nav-glass { background: rgba(10, 15, 26, 0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .nav-glass { background: rgba(13, 12, 11, 0.86); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
 
-        /* Card styles */
+        /* Card styles — subtle top edge-light, like light catching a forged plate */
         .card {
-            background: #111827;
+            background: #171513;
             border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 20px;
+            border-radius: 18px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
             transition: all 0.2s ease;
         }
         .card:hover { border-color: rgba(255,255,255,0.10); }
@@ -75,20 +97,20 @@
         .input-field {
             background: rgba(0,0,0,0.3);
             border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
+            border-radius: 14px;
             transition: all 0.2s ease;
         }
-        .input-field:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); outline: none; }
+        .input-field:focus { border-color: #FF5A1F; box-shadow: 0 0 0 3px rgba(255,90,31,0.15); outline: none; }
 
         /* Button primary */
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            border-radius: 16px;
+            background: linear-gradient(135deg, #FF5A1F 0%, #E1470E 100%);
+            border-radius: 14px;
             font-weight: 700;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 20px rgba(59,130,246,0.25);
+            box-shadow: 0 4px 20px rgba(255,90,31,0.25);
         }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(59,130,246,0.35); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(255,90,31,0.35); }
         .btn-primary:active { transform: translateY(0); }
 
         /* Button ghost */
@@ -102,9 +124,10 @@
 
         /* Category card */
         .cat-card {
-            background: linear-gradient(145deg, #111827 0%, #0d1320 100%);
+            background: linear-gradient(145deg, #171513 0%, #0F0D0B 100%);
             border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 24px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cat-card:hover {
@@ -117,15 +140,15 @@
         /* Series row */
         .series-row {
             background: rgba(255,255,255,0.03);
-            border-radius: 16px;
-            border-left: 3px solid var(--cat-color, #3b82f6);
+            border-radius: 14px;
+            border-left: 3px solid var(--cat-color, #FF5A1F);
             transition: all 0.15s ease;
         }
         .series-row:hover { background: rgba(255,255,255,0.05); }
 
         /* Nav item */
         .nav-item { position: relative; transition: all 0.2s ease; }
-        .nav-item.active { color: #3b82f6; }
+        .nav-item.active { color: #FF5A1F; }
         .nav-item.active::after {
             content: '';
             position: absolute;
@@ -134,9 +157,9 @@
             transform: translateX(-50%);
             width: 4px;
             height: 4px;
-            background: #3b82f6;
+            background: #FF5A1F;
             border-radius: 50%;
-            box-shadow: 0 0 8px rgba(59,130,246,0.6);
+            box-shadow: 0 0 8px rgba(255,90,31,0.6);
         }
 
         /* Number input hide spinners */
@@ -162,7 +185,7 @@
             animation: recordFlash 0.6s ease-out;
         }
         @keyframes recordFlash {
-            0% { background: rgba(34,197,94,0.2); }
+            0% { background: rgba(198,241,53,0.2); }
             100% { background: transparent; }
         }
 
@@ -178,8 +201,8 @@
 
         /* Rest day card */
         .rest-card {
-            background: linear-gradient(135deg, rgba(17,24,39,0.9) 0%, rgba(10,15,26,0.95) 100%);
-            border: 1px solid rgba(148,163,184,0.15);
+            background: linear-gradient(135deg, rgba(23,21,19,0.9) 0%, rgba(13,12,11,0.95) 100%);
+            border: 1px solid rgba(168,162,155,0.15);
             border-radius: 24px;
         }
     </style>
@@ -195,10 +218,10 @@
     <header class="fixed top-0 left-0 right-0 z-50 nav-glass border-b border-white/5">
         <div class="flex items-center justify-between px-5 py-4 max-w-lg mx-auto">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+                <div class="w-9 h-9 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center">
                     <i class="fas fa-dumbbell text-primary text-sm"></i>
                 </div>
-                <span class="font-bold text-base tracking-tight">Tracker</span>
+                <span class="font-display font-extrabold text-lg tracking-wide uppercase leading-none">Tracker <span class="text-primary">Fuerza</span></span>
             </div>
             <button onclick="app.newWorkout()" class="touch btn-primary text-white px-5 py-2.5 text-sm flex items-center gap-2">
                 <i class="fas fa-plus text-xs"></i>Entrenar
@@ -231,7 +254,7 @@
                     </div>
                     <div>
                         <div class="text-[9px] font-bold text-textMuted uppercase tracking-wider leading-none">Descanso</div>
-                        <div id="restTimerDisplay" class="text-xl font-black tabular-nums leading-tight mt-0.5" style="color: #22c55e; font-variant-numeric: tabular-nums;">00:00</div>
+                        <div id="restTimerDisplay" class="text-xl font-black tabular-nums leading-tight mt-0.5" style="color: #C6F135; font-variant-numeric: tabular-nums;">00:00</div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -293,11 +316,11 @@
 <script>
 
 const DEFAULT_CATEGORIES = [
-    { id: 'cat1', name: 'Empuje', color: '#ef4444', icon: 'fa-hand-fist' },
-    { id: 'cat2', name: 'Tracción', color: '#06b6d4', icon: 'fa-hand-back-fist' },
+    { id: 'cat1', name: 'Empuje', color: '#FF4B4B', icon: 'fa-hand-fist' },
+    { id: 'cat2', name: 'Tracción', color: '#14B8A6', icon: 'fa-hand-back-fist' },
     { id: 'cat3', name: 'Pierna', color: '#3b82f6', icon: 'fa-person-running' },
-    { id: 'cat4', name: 'Otros', color: '#22c55e', icon: 'fa-spa' },
-    { id: 'cat5', name: 'Descanso', color: '#94a3b8', icon: 'fa-bed' }
+    { id: 'cat4', name: 'Otros', color: '#34D399', icon: 'fa-spa' },
+    { id: 'cat5', name: 'Descanso', color: '#8A8580', icon: 'fa-bed' }
 ];
 
 const DEFAULT_EXERCISES = [
@@ -344,7 +367,7 @@ const Storage = {
         } else {
             const hasRest = cats.some(c => c.id === 'cat5');
             if (!hasRest) {
-                cats.push({ id: 'cat5', name: 'Descanso', color: '#94a3b8', icon: 'fa-bed' });
+                cats.push({ id: 'cat5', name: 'Descanso', color: '#8A8580', icon: 'fa-bed' });
                 Storage.set('categories', cats);
             }
         }
@@ -465,11 +488,11 @@ const app = {
         // Cambiar color según tiempo transcurrido
         const totalSeconds = Math.floor(this.restTimer.elapsed / 1000);
         if (totalSeconds < 60) {
-            el.style.color = '#22c55e'; // verde
+            el.style.color = '#C6F135'; // verde
         } else if (totalSeconds < 120) {
-            el.style.color = '#f59e0b'; // amarillo
+            el.style.color = '#FFB020'; // amarillo
         } else {
-            el.style.color = '#ef4444'; // rojo
+            el.style.color = '#FF4B4B'; // rojo
         }
         // Actualizar icono play/pausa
         const iconEl = document.getElementById('restTimerIcon');
@@ -658,7 +681,7 @@ const app = {
                     const cwEntries = cw.entries?.length || 0;
                     const cwVol = cw.entries?.reduce((s, e) => s + e.weight * e.reps, 0) || 0;
                     return `
-                    <div class="card p-4 border-l-4 border-primary fade-up" style="border-left-color: ${cwCat?.color || '#3b82f6'}">
+                    <div class="card p-4 border-l-4 border-primary fade-up" style="border-left-color: ${cwCat?.color || '#FF5A1F'}">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: ${cwCat?.color}15">
@@ -681,18 +704,18 @@ const app = {
                         const isRest = lastWorkout.isRest || cat?.id === 'cat5';
                         const vol = lastWorkout.entries?.reduce((s,e) => s + e.weight * e.reps, 0) || 0;
                         return `
-                        <div class="card p-5" style="background: linear-gradient(135deg, ${isRest ? '#1e293b' : cat?.color + '12'} 0%, #111827 100%); border-color: ${isRest ? 'rgba(255,255,255,0.06)' : cat?.color + '30'}">
+                        <div class="card p-5" style="background: linear-gradient(135deg, ${isRest ? '#211E1B' : cat?.color + '12'} 0%, #171513 100%); border-color: ${isRest ? 'rgba(255,255,255,0.06)' : cat?.color + '30'}">
                             <div class="flex items-center justify-between mb-3">
                                 <span class="text-[10px] font-bold text-textMuted uppercase tracking-widest">Última sesión · ${lastDate}</span>
-                                <div class="w-2 h-2 rounded-full" style="background: ${cat?.color || '#6b7280'}; box-shadow: 0 0 8px ${cat?.color || '#6b7280'}60"></div>
+                                <div class="w-2 h-2 rounded-full" style="background: ${cat?.color || '#6F6A63'}; box-shadow: 0 0 8px ${cat?.color || '#6F6A63'}60"></div>
                             </div>
                             <div class="flex items-center gap-4">
                                 <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style="background: ${cat?.color}18; color: ${cat?.color}">
                                     <i class="fas ${cat?.icon || 'fa-dumbbell'}"></i>
                                 </div>
                                 <div>
-                                    <h2 class="text-xl font-black text-text tracking-tight">${cat?.name || 'Sin categoría'}</h2>
-                                    <p class="text-sm text-textSecondary font-medium mt-0.5">${isRest ? 'Día de recuperación' : `${lastWorkout.entries?.length || 0} series · ${vol.toLocaleString()} kg`}</p>
+                                    <h2 class="text-2xl font-black text-text tracking-tight leading-none">${cat?.name || 'Sin categoría'}</h2>
+                                    <p class="text-sm text-textSecondary font-medium mt-1.5">${isRest ? 'Día de recuperación' : `${lastWorkout.entries?.length || 0} series · ${vol.toLocaleString()} kg`}</p>
                                 </div>
                             </div>
                         </div>`;
@@ -1523,9 +1546,9 @@ const app = {
                     plugins: { 
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                            titleColor: '#f9fafb',
-                            bodyColor: '#f9fafb',
+                            backgroundColor: 'rgba(23, 21, 19, 0.95)',
+                            titleColor: '#F5F2ED',
+                            bodyColor: '#F5F2ED',
                             borderColor: 'rgba(255,255,255,0.1)',
                             borderWidth: 1,
                             padding: 10,
@@ -1543,7 +1566,7 @@ const app = {
                     scales: {
                         x: { 
                             ticks: { 
-                                color: '#6b7280', 
+                                color: '#6F6A63', 
                                 font: { size: 9, weight: '600' },
                                 maxRotation: 0,
                                 autoSkip: false,
@@ -1553,7 +1576,7 @@ const app = {
                         },
                         y: { 
                             ticks: { 
-                                color: '#6b7280', 
+                                color: '#6F6A63', 
                                 font: { size: 9, weight: '600' },
                                 padding: 8
                             }, 
@@ -1581,7 +1604,7 @@ const app = {
 
         createChart('chartWeight', allEntries.map(e => e.weight), 'Peso (kg)', '#3b82f6');
         createChart('chartRM', allEntries.map(e => e.rm), 'RM (kg)', '#a855f7');
-        createChart('chartVolume', allEntries.map(e => e.volume), 'Volumen (kg)', '#f59e0b');
+        createChart('chartVolume', allEntries.map(e => e.volume), 'Volumen (kg)', '#FFB020');
     },
 
     renderSettings() {
@@ -1761,7 +1784,7 @@ const app = {
     },
 
     addCategory() {
-        const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
+        const colors = ['#FF4B4B', '#f97316', '#FFB020', '#84cc16', '#C6F135', '#14B8A6', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
         const icons = ['fa-dumbbell', 'fa-hand-fist', 'fa-person-running', 'fa-spa', 'fa-fire', 'fa-bolt'];
         const newCat = {
             id: 'cat' + Date.now(),
@@ -2123,11 +2146,11 @@ const app = {
         }
 
         const formulas = [
-            { name: 'Epley', color: '#ef4444', fn: (w, r) => w * (1 + r / 30) },
-            { name: 'Brzycki', color: '#06b6d4', fn: (w, r) => w * (36 / (37 - r)) },
+            { name: 'Epley', color: '#FF4B4B', fn: (w, r) => w * (1 + r / 30) },
+            { name: 'Brzycki', color: '#14B8A6', fn: (w, r) => w * (36 / (37 - r)) },
             { name: 'Lombardi', color: '#3b82f6', fn: (w, r) => w * Math.pow(r, 0.10) },
-            { name: "O'Conner", color: '#22c55e', fn: (w, r) => w * (1 + 0.025 * r) },
-            { name: 'Lander', color: '#f59e0b', fn: (w, r) => (100 * w) / (101.3 - 2.67123 * r) },
+            { name: "O'Conner", color: '#C6F135', fn: (w, r) => w * (1 + 0.025 * r) },
+            { name: 'Lander', color: '#FFB020', fn: (w, r) => (100 * w) / (101.3 - 2.67123 * r) },
             { name: 'Mayhew', color: '#a855f7', fn: (w, r) => (100 * w) / (52.2 + (41.9 * Math.exp(-0.055 * r))) },
             { name: 'Wathan', color: '#f43f5e', fn: (w, r) => (100 * w) / (48.8 + (53.8 * Math.exp(-0.075 * r))) }
         ];
@@ -2376,10 +2399,10 @@ const app = {
 
         const soundOptions = [
             { id: 'beep', name: 'Pitido clásico', color: '#3b82f6' },
-            { id: 'double', name: 'Doble pitido', color: '#06b6d4' },
-            { id: 'alarm', name: 'Alarma', color: '#ef4444' },
-            { id: 'chime', name: 'Campana', color: '#22c55e' },
-            { id: 'digital', name: 'Digital', color: '#f59e0b' }
+            { id: 'double', name: 'Doble pitido', color: '#14B8A6' },
+            { id: 'alarm', name: 'Alarma', color: '#FF4B4B' },
+            { id: 'chime', name: 'Campana', color: '#C6F135' },
+            { id: 'digital', name: 'Digital', color: '#FFB020' }
         ];
 
         let htmlModal = '<h3 class="text-xl font-black text-text mb-1 tracking-tight">Configurar alerta</h3>';
@@ -2461,10 +2484,10 @@ const app = {
         const label = action === 'playpause'
             ? (this.restTimer.running ? 'Pausado' : 'Iniciado')
             : 'Reiniciado';
-        el.innerHTML = '<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:80;background:rgba(17,24,39,0.95);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:24px 36px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,0.6);animation:headphonePop 0.3s cubic-bezier(0.16,1,0.3,1);">' +
-            '<div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;font-size:22px;color:white;box-shadow:0 8px 24px rgba(59,130,246,0.35);">' + icon + '</div>' +
-            '<div style="font-weight:800;font-size:15px;color:#f9fafb;">' + label + '</div>' +
-            '<div style="font-size:11px;color:#6b7280;font-weight:600;">Audífono detectado</div>' +
+        el.innerHTML = '<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:80;background:rgba(23,21,19,0.95);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:24px 36px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,0.6);animation:headphonePop 0.3s cubic-bezier(0.16,1,0.3,1);">' +
+            '<div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#FF5A1F,#E1470E);display:flex;align-items:center;justify-content:center;font-size:22px;color:white;box-shadow:0 8px 24px rgba(255,90,31,0.35);">' + icon + '</div>' +
+            '<div style="font-weight:800;font-size:15px;color:#F5F2ED;">' + label + '</div>' +
+            '<div style="font-size:11px;color:#6F6A63;font-weight:600;">Audífono detectado</div>' +
             '</div>' +
             '<style>@keyframes headphonePop{from{opacity:0;transform:translate(-50%,-50%) scale(0.8)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes headphoneFade{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(0.9)}}</style>';
         document.body.appendChild(el);
@@ -2481,10 +2504,10 @@ const app = {
         const isActive = mediaSessionActive;
 
         const commands = [
-            { key: 'play',     icon: 'fa-play',       color: '#22c55e', desc: 'Play / Pausa (Media Session)' },
+            { key: 'play',     icon: 'fa-play',       color: '#C6F135', desc: 'Play / Pausa (Media Session)' },
             { key: 'pause',    icon: 'fa-pause',      color: '#3b82f6', desc: 'Pausa (Media Session)' },
-            { key: 'next',     icon: 'fa-forward',    color: '#f59e0b', desc: 'Siguiente pista (Media Session)' },
-            { key: 'previous', icon: 'fa-backward',   color: '#ef4444', desc: 'Pista anterior (Media Session)' },
+            { key: 'next',     icon: 'fa-forward',    color: '#FFB020', desc: 'Siguiente pista (Media Session)' },
+            { key: 'previous', icon: 'fa-backward',   color: '#FF4B4B', desc: 'Pista anterior (Media Session)' },
             { key: 'key',      icon: 'fa-keyboard',   color: '#a855f7', desc: 'Teclado / Evento de tecla' }
         ];
 
@@ -2509,13 +2532,13 @@ const app = {
         htmlModal += '<i class="fas fa-power-off mr-2"></i>' + (isActive ? 'Reactivar control' : 'Activar control por audífono') + '</button>';
 
         // Modo aprendizaje
-        htmlModal += '<div class="card p-4 mb-5" style="border:1px solid rgba(59,130,246,0.2)">';
+        htmlModal += '<div class="card p-4 mb-5" style="border:1px solid rgba(255,90,31,0.2)">';
         htmlModal += '<div class="flex items-center justify-between mb-3">';
         htmlModal += '<div class="flex items-center gap-2"><i class="fas fa-graduation-cap text-primary text-sm"></i><span class="text-sm font-bold text-text">Modo aprendizaje</span></div>';
         htmlModal += '<button onclick="app.toggleLearningMode()" id="learnToggleBtn" class="touch px-3 py-1.5 rounded-lg text-xs font-bold ' + (learningMode ? 'bg-success text-white' : 'bg-white/10 text-textMuted') + ' transition-colors">' + (learningMode ? 'ACTIVO' : 'Inactivo') + '</button>';
         htmlModal += '</div>';
         htmlModal += '<p class="text-xs text-textMuted mb-2">Activa este modo y toca tu audífono. La app detectará qué comando llega para que sepas cuál configurar.</p>';
-        htmlModal += '<div id="learnDisplay" class="text-center py-3 rounded-xl bg-black/20 text-sm font-bold text-textMuted">' + (lastDetectedCommand ? '<span style="color:#22c55e"><i class="fas fa-bolt mr-1"></i>' + (cfg[lastDetectedCommand]?.label || lastDetectedCommand) + '</span> <span style="color:#6b7280">(' + lastDetectedCommand + ')</span>' : 'Esperando gesto...') + '</div>';
+        htmlModal += '<div id="learnDisplay" class="text-center py-3 rounded-xl bg-black/20 text-sm font-bold text-textMuted">' + (lastDetectedCommand ? '<span style="color:#C6F135"><i class="fas fa-bolt mr-1"></i>' + (cfg[lastDetectedCommand]?.label || lastDetectedCommand) + '</span> <span style="color:#6F6A63">(' + lastDetectedCommand + ')</span>' : 'Esperando gesto...') + '</div>';
         htmlModal += '</div>';
 
         // Configuración por comando
@@ -2654,7 +2677,7 @@ function handleHeadphoneAction(command) {
             app.showToast('Detectado: ' + (cfg[command]?.label || command), 'success');
             const learnDisplay = document.getElementById('learnDisplay');
             if (learnDisplay) {
-                learnDisplay.innerHTML = '<span style="color:#22c55e"><i class="fas fa-bolt mr-1"></i>' + (cfg[command]?.label || command) + '</span> <span style="color:#6b7280">(' + command + ')</span>';
+                learnDisplay.innerHTML = '<span style="color:#C6F135"><i class="fas fa-bolt mr-1"></i>' + (cfg[command]?.label || command) + '</span> <span style="color:#6F6A63">(' + command + ')</span>';
             }
             return;
         }
